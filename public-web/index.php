@@ -11,9 +11,9 @@ $project = [
     'name' => 'VocalisMeta',
     'version' => '0.1.0',
     'github_web' => 'https://github.com/kladhest-se/vocalismeta',
-    'gitlab_web' => 'https://gitlab.kladhest.se/kladhest/vocalismeta',
     'github_git' => 'git@github.com:kladhest-se/vocalismeta.git',
-    'gitlab_git' => 'git@gitlab.kladhest.se:kladhest/vocalismeta.git',
+    'github_clone' => 'https://github.com/kladhest-se/vocalismeta.git',
+    'player_web' => 'https://vocalisbook.kladhest.se',
 ];
 
 $features = [
@@ -51,6 +51,7 @@ function e(string $value): string
     <nav aria-label="Primary navigation">
       <a href="#features">Features</a>
       <a href="#architecture">How it works</a>
+      <a href="<?= e($project['player_web']) ?>">VocalisBook</a>
       <a href="#install">Install</a>
       <a class="nav-cta" href="<?= e($project['github_web']) ?>">GitHub</a>
     </nav>
@@ -132,18 +133,36 @@ function e(string $value): string
     </div>
   </section>
 
+  <section class="section player-promo" id="player">
+    <div class="player-copy">
+      <p class="section-label">Recommended audiobook player</p>
+      <h2>Metadata made to be heard.</h2>
+      <p>Pair VocalisMeta with VocalisBook for an audiobook-first Plex experience across your Apple devices.</p>
+      <a class="button primary" href="<?= e($project['player_web']) ?>">Discover VocalisBook <span>→</span></a>
+    </div>
+    <div class="player-card">
+      <span class="player-mark">V</span>
+      <div><strong>VocalisBook</strong><p>Audiobooks from your Plex library.</p></div>
+      <div class="player-platforms"><span>macOS</span><span>iPhone</span><span>iPad</span><span>Apple TV</span></div>
+    </div>
+  </section>
+
   <section class="section install" id="install">
     <div class="install-copy">
       <p class="section-label">Direct installation</p>
       <h2>A clean, predictable Plex bundle.</h2>
-      <p>Clone either official repository, copy <code>VocalisMeta.bundle</code> into Plex's plug-in directory, set Plex ownership, and restart the server.</p>
+      <p>Clone the public GitHub repository, copy <code>VocalisMeta.bundle</code> into Plex's plug-in directory, set Plex ownership, and restart the server.</p>
       <ul><li>Static development version <?= e($project['version']) ?></li><li>Runs entirely inside Plex</li><li>No companion service</li></ul>
     </div>
     <div class="terminal">
       <div class="terminal-top"><span></span><span></span><span></span><b>INSTALL</b></div>
-      <pre><code><span>$</span> git clone \
-  git@gitlab.kladhest.se:kladhest/vocalismeta.git \
+      <pre><code><span>$</span> git clone --depth 1 \
+  <?= e($project['github_clone']) ?> \
   vocalismeta
+
+<span>$</span> sudo rm -rf -- \
+  "/var/lib/plexmediaserver/Library/Application Support/\
+Plex Media Server/Plug-ins/VocalisMeta.bundle"
 
 <span>$</span> sudo cp -a vocalismeta/VocalisMeta.bundle \
   "/var/lib/plexmediaserver/Library/Application Support/\
@@ -152,10 +171,8 @@ Plex Media Server/Plug-ins/VocalisMeta.bundle"
 <span>$</span> sudo systemctl restart plexmediaserver</code></pre>
     </div>
     <div class="repository-card">
-      <p class="section-label">Source repositories</p>
-      <strong>GitLab primary</strong>
-      <code><?= e($project['gitlab_git']) ?></code>
-      <strong>GitHub mirror</strong>
+      <p class="section-label">Public source repository</p>
+      <strong>GitHub</strong>
       <code><?= e($project['github_git']) ?></code>
     </div>
   </section>
@@ -163,7 +180,7 @@ Plex Media Server/Plug-ins/VocalisMeta.bundle"
   <footer>
     <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>VocalisMeta</span></a>
     <p>Metadata for audiobooks in Plex.</p>
-    <div><a href="<?= e($project['gitlab_web']) ?>">GitLab</a><a href="<?= e($project['github_web']) ?>">GitHub</a><a href="<?= e($project['github_web']) ?>/blob/main/README.md">Documentation</a><a href="<?= e($project['github_web']) ?>/blob/main/LICENSE">MIT License</a></div>
+    <div><a href="<?= e($project['github_web']) ?>">GitHub</a><a href="<?= e($project['player_web']) ?>">VocalisBook</a><a href="<?= e($project['github_web']) ?>/blob/main/README.md">Documentation</a><a href="<?= e($project['github_web']) ?>/blob/main/LICENSE">MIT License</a></div>
   </footer>
 </main>
 </body>
