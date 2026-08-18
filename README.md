@@ -13,12 +13,11 @@ The repository keeps its deployable components separate:
 - `VocalisMeta.bundle/` is the complete Plex metadata-agent runtime.
 - `public-web/` is the lightweight PHP project website.
 
-The official Git repositories are:
+The public source repository is:
 
-- Primary GitLab: `git@gitlab.kladhest.se:kladhest/vocalismeta.git`
-- GitHub mirror: `git@github.com:kladhest-se/vocalismeta.git`
+- GitHub: <https://github.com/kladhest-se/vocalismeta>
 
-Both repositories contain the same official source and release files.
+Public installation uses GitHub's HTTPS clone URL and requires no SSH key.
 
 ## What it adds
 
@@ -54,6 +53,13 @@ author names and identifiers through products, but not full author biographies
 or portrait images. It sets the author name, sort name, and representative book
 genres without scraping Audible web pages.
 
+## Recommended audiobook player
+
+For the best listening experience with a VocalisMeta-powered Plex library, use
+[VocalisBook](https://vocalisbook.kladhest.se). It is an audiobook player for
+macOS, iPhone, iPad, and Apple TV designed to consume VocalisMeta identities,
+authors, narrators, series, editions, and other audiobook metadata from Plex.
+
 ## Install
 
 ### Debian and Ubuntu
@@ -66,22 +72,27 @@ only `VocalisMeta.bundle` into Plex:
 git --version
 
 PLUGIN_DIR='/var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-ins'
-CHECKOUT_DIR='/tmp/VocalisMeta'
-
-sudo mkdir -p "$PLUGIN_DIR"
-git clone git@gitlab.kladhest.se:kladhest/vocalismeta.git "$CHECKOUT_DIR"
-git -C "$CHECKOUT_DIR" remote add github \
-  git@github.com:kladhest-se/vocalismeta.git
-sudo cp -a "$CHECKOUT_DIR/VocalisMeta.bundle" "$PLUGIN_DIR/VocalisMeta.bundle"
-sudo chown -R plex:plex "$PLUGIN_DIR/VocalisMeta.bundle"
+CHECKOUT_DIR="$(mktemp -d /tmp/VocalisMeta.XXXXXXXX)" &&
+git clone --depth 1 \
+  https://github.com/kladhest-se/vocalismeta.git \
+  "$CHECKOUT_DIR" &&
+sudo mkdir -p "$PLUGIN_DIR" &&
+sudo rm -rf -- "$PLUGIN_DIR/VocalisMeta.bundle" &&
+sudo cp -a \
+  "$CHECKOUT_DIR/VocalisMeta.bundle" \
+  "$PLUGIN_DIR/VocalisMeta.bundle" &&
+sudo chown -R plex:plex "$PLUGIN_DIR/VocalisMeta.bundle" &&
+sudo systemctl restart plexmediaserver &&
+sudo systemctl is-active --quiet plexmediaserver &&
+echo 'VocalisMeta installed and Plex is active.'
 ```
 
-Restart Plex Media Server and verify that the service returned to its active
-state:
+The `&&` operators are intentional: if downloading or copying fails, later
+steps do not run. After a successful installation, remove the temporary
+checkout:
 
 ```bash
-sudo systemctl restart plexmediaserver
-sudo systemctl --no-pager --full status plexmediaserver
+sudo rm -rf -- "$CHECKOUT_DIR"
 ```
 
 Then configure the audiobook library in Plex Web:
