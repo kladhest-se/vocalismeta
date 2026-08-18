@@ -1,0 +1,174 @@
+[
+  {
+    "id": "config_file",
+    "label": "Optional absolute path to VocalisMeta JSON configuration",
+    "type": "text",
+    "default": ""
+  },
+  {
+    "id": "region",
+    "label": "Default Audible region",
+    "type": "enum",
+    "values": ["au", "ca", "de", "es", "fr", "in", "it", "jp", "us", "uk"],
+    "default": "us"
+  },
+  {
+    "id": "max_results",
+    "label": "Maximum search results",
+    "type": "enum",
+    "values": ["10", "20", "25", "50"],
+    "default": "20"
+  },
+  {
+    "id": "fallback_regions",
+    "label": "Fallback Audible regions, comma-separated (maximum 4)",
+    "type": "text",
+    "default": ""
+  },
+  {
+    "id": "librivox_enabled",
+    "label": "Enable LibriVox matching",
+    "type": "bool",
+    "default": "false"
+  },
+  {
+    "id": "librivox_mode",
+    "label": "LibriVox matching mode when enabled",
+    "type": "enum",
+    "values": ["hinted_only", "fallback", "preferred"],
+    "default": "fallback"
+  },
+  {
+    "id": "openlibrary_enabled",
+    "label": "Use Open Library to fill missing descriptions, genres, dates, or covers",
+    "type": "bool",
+    "default": "true"
+  },
+  {
+    "id": "googlebooks_enabled",
+    "label": "Use Google Books to fill missing descriptions, genres, dates, or covers",
+    "type": "bool",
+    "default": "true"
+  },
+  {
+    "id": "googlebooks_api_key",
+    "label": "Google Books API key (blank disables Google Books)",
+    "type": "text",
+    "default": ""
+  },
+  {
+    "id": "enrichment_order",
+    "label": "Book enrichment source priority",
+    "type": "enum",
+    "values": ["openlibrary_first", "googlebooks_first"],
+    "default": "openlibrary_first"
+  },
+  {
+    "id": "enrichment_request_budget",
+    "label": "Maximum enrichment API calls per album refresh",
+    "type": "enum",
+    "values": ["2", "4", "6", "8", "12"],
+    "default": "8"
+  },
+  {
+    "id": "include_subtitle",
+    "label": "Append Audible subtitle to the book title",
+    "type": "bool",
+    "default": "true"
+  },
+  {
+    "id": "simplify_title",
+    "label": "Use only the main title",
+    "type": "bool",
+    "default": "false"
+  },
+  {
+    "id": "keep_existing_genres",
+    "label": "Keep embedded genres instead of replacing them",
+    "type": "bool",
+    "default": "false"
+  },
+  {
+    "id": "store_authors_as_moods",
+    "label": "Store authors as Mood tags",
+    "type": "bool",
+    "default": "true"
+  },
+  {
+    "id": "series_as_moods",
+    "label": "Store series as Mood tags prefixed with Series:",
+    "type": "bool",
+    "default": "true"
+  },
+  {
+    "id": "embedded_series_fallback",
+    "label": "Use embedded series when the matched source has no series",
+    "type": "bool",
+    "default": "true"
+  },
+  {
+    "id": "embedded_contributor_fallback",
+    "label": "Use embedded authors or narrators when the matched source has none",
+    "type": "bool",
+    "default": "true"
+  },
+  {
+    "id": "author_genres",
+    "label": "Add genres from an author's Audible books",
+    "type": "bool",
+    "default": "true"
+  },
+  {
+    "id": "exclude_preorders",
+    "label": "Exclude unreleased preorders from automatic matching",
+    "type": "bool",
+    "default": "true"
+  },
+  {
+    "id": "include_adult",
+    "label": "Include Audible products marked as adult",
+    "type": "bool",
+    "default": "false"
+  },
+  {
+    "id": "image_size",
+    "label": "Requested cover size",
+    "type": "enum",
+    "values": ["500", "1000", "2000", "3000"],
+    "default": "2000"
+  },
+  {
+    "id": "artwork_preference",
+    "label": "Album artwork preference",
+    "type": "enum",
+    "values": ["local_first", "audible_first", "local_only", "audible_only"],
+    "default": "local_first"
+  },
+  {
+    "id": "request_retries",
+    "label": "Maximum API request attempts",
+    "type": "enum",
+    "values": ["1", "2", "3", "4", "5"],
+    "default": "3"
+  },
+  {
+    "id": "request_timeout",
+    "label": "API request timeout in seconds",
+    "type": "enum",
+    "values": ["15", "30", "45", "60", "90", "120"],
+    "default": "45"
+  },
+  {
+    "id": "api_base_url",
+    "label": "Advanced: custom Audible-compatible API base URL (normally blank)",
+    "type": "text",
+    "default": ""
+  },
+  {
+    "id": "logging_level",
+    "label": "Logging level",
+    "type": "enum",
+    "values": ["DEBUG", "INFO", "WARN", "ERROR"],
+    "default": "INFO"
+  }
+]
