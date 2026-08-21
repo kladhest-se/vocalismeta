@@ -94,22 +94,43 @@ from openlibrary_core import (
     documents_from_response as openlibrary_documents,
     equivalent_isbns as openlibrary_equivalent_isbns,
     isbn_search_url as openlibrary_isbn_search_url,
+    normalize_work_id as openlibrary_normalize_work_id,
     product_isbns,
     score_document as score_openlibrary_document,
     search_url as openlibrary_search_url,
     work_description as openlibrary_work_description,
+    work_identity as openlibrary_work_identity,
     work_url as openlibrary_work_url,
 )
 from request_tools import RequestBudget, backoff_seconds, should_retry, status_from_error
 from config_core import ConfigError, file_signature, load_config_file
 from identity_core import book_identity, split_book_identity
+from client_metadata_core import (
+    audible_contributor_tags,
+    librivox_contributor_tags,
+    openlibrary_contributor_tags,
+    production_type as client_production_type,
+    rating_count as client_rating_count,
+)
 
 AGENT_NAME = 'VocalisMeta Agent'
 VERSION = '0.1.0'
+WORK_ID_MOOD_PREFIX = 'Work-ID: '
+CONTRIBUTOR_ID_MOOD_PREFIX = 'Contributor-ID: '
+WORK_PUBLISHED_MOOD_PREFIX = 'Work-Published: '
+RATING_SOURCE_MOOD_PREFIX = 'Rating-Source: '
+RATING_COUNT_MOOD_PREFIX = 'Rating-Count: '
+PRODUCTION_MOOD_PREFIX = 'Production: '
+V3_MOOD_PREFIXES = (
+    CONTRIBUTOR_ID_MOOD_PREFIX, WORK_PUBLISHED_MOOD_PREFIX,
+    RATING_SOURCE_MOOD_PREFIX, RATING_COUNT_MOOD_PREFIX,
+    PRODUCTION_MOOD_PREFIX,
+)
 MAX_MEDIA_PARTS = 256
 MAX_FALLBACK_REGIONS = 4
 AUDIBLE_SEARCH_CACHE_SECONDS = 300
 LIBRIVOX_SEARCH_CACHE_SECONDS = 300
+BOOK_SEARCH_CACHE_SECONDS = 300
 UNKNOWN_VALUES = ('', '[Unknown Album]', '[Unknown Artist]', 'Unknown Artist')
 API_KEY_RE = re.compile(r'([?&]key=)[^&]+', re.I)
 
@@ -294,6 +315,44 @@ def log_album_search_summary(
     log('INFO', 'SEARCH_SUMMARY ' + ' '.join(fields))
 
 
+def contract_v3_tag_count(container):
+    count = 0
+    for item in container:
+        item = to_text(item).strip()
+        for prefix in V3_MOOD_PREFIXES:
+            if item.startswith(prefix):
+                count += 1
+                break
+    return count
+
+
+def log_album_update_summary(
+    metadata, outcome, provider, reason, title='', forced=False
+):
+    work_identity = ''
+    identities = existing_work_identities(metadata.moods)
+    if identities:
+        work_identity = identities[0]
+    try:
+        poster_count = len(metadata.posters)
+    except Exception:
+        poster_count = 0
+    fields = [
+        'outcome=' + diagnostic_value(outcome),
+        'provider=' + diagnostic_value(provider),
+        'identity=' + diagnostic_value(metadata.id),
+        'title=' + diagnostic_value(title or metadata.title),
+        'work_identity=' + diagnostic_value(work_identity),
+        'extended_tags=' + diagnostic_value(
+            contract_v3_tag_count(metadata.moods)
+        ),
+        'posters=' + diagnostic_value(poster_count),
+        'forced=' + diagnostic_value('true' if forced else 'false'),
+        'reason=' + diagnostic_value(reason),
+    ]
+    log('INFO', 'UPDATE_SUMMARY ' + ' '.join(fields))
+
+
 def ValidatePrefs():
     external_config_values(force=True)
     log('INFO', 'Preferences updated')
@@ -333,10 +392,14 @@ def request_json(url, cache_time=CACHE_1DAY, request_status=None):
         timeout = max(10, min(120, int(pref('request_timeout', 45))))
     except (TypeError, ValueError):
         timeout = 45
+    effective_cache_time = cache_time
     for attempt in range(1, attempts + 1):
         last_attempt = attempt
         try:
-            response = HTTP.Request(url, timeout=timeout, cacheTime=cache_time, immediate=True)
+            response = HTTP.Request(
+                url, timeout=timeout, cacheTime=effective_cache_time,
+                immediate=True
+            )
             try:
                 body = response.content
             except AttributeError:
@@ -349,6 +412,11 @@ def request_json(url, cache_time=CACHE_1DAY, request_status=None):
                 last_status = None
                 if attempt >= attempts:
                     break
+                # A second request against the same cached malformed body cannot
+                # recover. Bypass Plex's HTTP cache for retries after a JSON
+                # decoding failure while retaining the caller's normal cache
+                # policy for valid responses.
+                effective_cache_time = 0
                 delay = backoff_seconds(attempt, error, maximum=30)
                 log(
                     'WARN',
@@ -695,7 +763,142 @@ def sort_title_with_series_fallback(product, title, fallback_entries):
     return title
 
 
-def relationship_moods(authors, series, language='', abridged=None):
+def work_identity_enabled():
+    return as_bool(pref('store_work_identity_as_mood', False), False)
+
+
+def extended_player_metadata_enabled():
+    return as_bool(pref('store_extended_player_metadata', False), False)
+
+
+def prune_disabled_contract_moods(container):
+    """Remove only disabled optional-contract values from Plex Moods."""
+    prefixes = []
+    if not work_identity_enabled():
+        prefixes.append(WORK_ID_MOOD_PREFIX)
+    if not extended_player_metadata_enabled():
+        prefixes.extend(V3_MOOD_PREFIXES)
+    if not prefixes:
+        return
+    current = [to_text(item).strip() for item in container]
+    values = []
+    for item in current:
+        remove = False
+        for prefix in prefixes:
+            if item.startswith(prefix):
+                remove = True
+                break
+        if item and not remove:
+            values.append(item)
+    if values != current:
+        replace_container(container, values)
+
+
+def valid_work_identity(value):
+    value = to_text(value).strip()
+    if not value.lower().startswith('openlibrary:'):
+        return ''
+    work_id = openlibrary_normalize_work_id(value.split(':', 1)[1])
+    return 'openlibrary:' + work_id if work_id else ''
+
+
+def existing_work_identities(container):
+    values = []
+    if not work_identity_enabled():
+        return values
+    for item in container:
+        item = to_text(item).strip()
+        if not item.startswith(WORK_ID_MOOD_PREFIX):
+            continue
+        identity = valid_work_identity(item[len(WORK_ID_MOOD_PREFIX):])
+        if identity:
+            values.append(identity)
+            break
+    return values
+
+
+def replace_work_identity(container, identity):
+    values = []
+    for item in container:
+        item = to_text(item).strip()
+        if item and not item.startswith(WORK_ID_MOOD_PREFIX):
+            values.append(item)
+    identity = valid_work_identity(identity)
+    if identity:
+        values.append(WORK_ID_MOOD_PREFIX + identity)
+    replace_container(container, values)
+
+
+def existing_v3_enrichment_tags(container):
+    values = []
+    if not extended_player_metadata_enabled():
+        return values
+    for item in container:
+        item = to_text(item).strip()
+        if re.match(r'^Work-Published: [1-9][0-9]{0,3}$', item):
+            values.append(item)
+        elif re.match(
+            r'^Contributor-ID: author:openlibrary:OL[0-9]+A = .+$', item
+        ):
+            values.append(item)
+    return values
+
+
+def existing_work_publication_year(container):
+    for item in existing_v3_enrichment_tags(container):
+        if item.startswith(WORK_PUBLISHED_MOOD_PREFIX):
+            return item[len(WORK_PUBLISHED_MOOD_PREFIX):]
+    return ''
+
+
+def replace_openlibrary_v3_metadata(container, document):
+    if not extended_player_metadata_enabled():
+        return
+    values = []
+    for item in container:
+        item = to_text(item).strip()
+        if item.startswith(WORK_PUBLISHED_MOOD_PREFIX):
+            continue
+        if item.startswith(
+            CONTRIBUTOR_ID_MOOD_PREFIX + 'author:openlibrary:'
+        ):
+            continue
+        if item:
+            values.append(item)
+    year = openlibrary_year(document)
+    if year:
+        values.append(WORK_PUBLISHED_MOOD_PREFIX + to_text(year))
+    values.extend(openlibrary_contributor_tags(document))
+    replace_container(container, values)
+
+
+def audible_v3_tags(product):
+    if not extended_player_metadata_enabled():
+        return []
+    values = audible_contributor_tags(product)
+    if rating_out_of_ten(product) is not None:
+        values.append(RATING_SOURCE_MOOD_PREFIX + 'Audible')
+        count = client_rating_count(product)
+        if count is not None:
+            values.append(RATING_COUNT_MOOD_PREFIX + to_text(count))
+    production = client_production_type(product)
+    if production:
+        values.append(PRODUCTION_MOOD_PREFIX + production)
+    return values
+
+
+def librivox_v3_tags(book):
+    if not extended_player_metadata_enabled():
+        return []
+    values = librivox_contributor_tags(book)
+    values.append(PRODUCTION_MOOD_PREFIX + 'Community recording')
+    return values
+
+
+def relationship_moods(
+    authors, series, language='', abridged=None, work_identities=None,
+    player_tags=None
+):
     """Build stable, client-readable relationship tags for Plex Moods."""
     moods = []
     if as_bool(pref('store_authors_as_moods', True), True):
@@ -716,6 +919,13 @@ def relationship_moods(authors, series, language='', abridged=None):
         moods.append('Edition: Abridged')
     elif abridged is False:
         moods.append('Edition: Unabridged')
+    if work_identity_enabled():
+        for identity in work_identities or []:
+            identity = valid_work_identity(identity)
+            if identity:
+                moods.append(WORK_ID_MOOD_PREFIX + identity)
+    if extended_player_metadata_enabled():
+        moods.extend(player_tags or [])
     return moods
 
 
@@ -1022,7 +1232,7 @@ def fetch_openlibrary_documents(title, author='', language='', limit=10, budget=
         return []
     url = openlibrary_search_url(title, author, language, limit)
     log('DEBUG', 'Open Library request: %s', url)
-    return openlibrary_documents(request_json(url, CACHE_1WEEK))
+    return openlibrary_documents(request_json(url, BOOK_SEARCH_CACHE_SECONDS))
 
 
 def fetch_openlibrary_isbn(isbn, budget=None):
@@ -1032,7 +1242,7 @@ def fetch_openlibrary_isbn(isbn, budget=None):
     if not use_enrichment_request(budget, 'Open Library'):
         return []
     log('DEBUG', 'Open Library ISBN enrichment request: %s', isbn)
-    return openlibrary_documents(request_json(url, CACHE_1WEEK))
+    return openlibrary_documents(request_json(url, BOOK_SEARCH_CACHE_SECONDS))
 
 
 def fetch_openlibrary_work(document, budget=None):
@@ -1081,7 +1291,7 @@ def fetch_googlebooks_isbn(isbn, budget=None):
     if not use_enrichment_request(budget, 'Google Books'):
         return []
     log('DEBUG', 'Google Books ISBN enrichment request: %s', isbn)
-    return googlebooks_volumes(request_json(url, CACHE_1WEEK))
+    return googlebooks_volumes(request_json(url, BOOK_SEARCH_CACHE_SECONDS))
 
 
 def fetch_googlebooks_volumes(
@@ -1097,7 +1307,7 @@ def fetch_googlebooks_volumes(
     if not use_enrichment_request(budget, 'Google Books'):
         return []
     log('DEBUG', 'Google Books title enrichment request: %s', title)
-    return googlebooks_volumes(request_json(url, CACHE_1WEEK))
+    return googlebooks_volumes(request_json(url, BOOK_SEARCH_CACHE_SECONDS))
 
 
 def fetch_librivox_book(book_id, provider_status=None):
@@ -1261,13 +1471,46 @@ def append_unique_urls(target, values):
             target.append(value)
 
 
-def needs_book_enrichment(metadata, keep_existing_genres, include_cover):
+def needs_regular_book_enrichment(metadata, keep_existing_genres, include_cover):
     return (
         not metadata.summary
         or not metadata.originally_available_at
         or (not keep_existing_genres and not metadata.genres)
         or include_cover
     )
+
+
+def needs_book_enrichment(
+    metadata, keep_existing_genres, include_cover, include_work_identity=False,
+    include_work_publication=False, refresh_work_relationships=False
+):
+    return (
+        needs_regular_book_enrichment(
+            metadata, keep_existing_genres, include_cover
+        )
+        or (
+            include_work_identity
+            and (
+                refresh_work_relationships
+                or not existing_work_identities(metadata.moods)
+            )
+        )
+        or (
+            include_work_publication
+            and (
+                refresh_work_relationships
+                or not existing_work_publication_year(metadata.moods)
+            )
+        )
+    )
+
+
+def work_relationship_refresh_required(previous_title, title, force=False):
+    if force:
+        return True
+    previous = normalize_text(previous_title)
+    current = normalize_text(title)
+    return bool(previous and current and previous != current)
 
 
 def apply_openlibrary_enrichment(
@@ -1278,7 +1521,12 @@ def apply_openlibrary_enrichment(
         product, title, author, language, embedded_isbns, budget
     )
     if not document:
-        return
+        return False
+    if work_identity_enabled():
+        identity = openlibrary_work_identity(document)
+        if identity:
+            replace_work_identity(metadata.moods, identity)
+    replace_openlibrary_v3_metadata(metadata.moods, document)
     if not metadata.summary:
         work = fetch_openlibrary_work(document, budget)
         description = (
@@ -1300,6 +1548,7 @@ def apply_openlibrary_enrichment(
             replace_container(metadata.genres, fallback_genres)
     if include_cover:
         append_unique_urls(image_urls, openlibrary_cover_urls(document))
+    return True
 
 
 def apply_googlebooks_enrichment(
@@ -1335,7 +1584,7 @@ def apply_googlebooks_enrichment(
 
 def enrich_and_apply_book_artwork(
     metadata, media, identity_product, title, authors, language,
-    matched_image_urls, embedded=None
+    matched_image_urls, embedded=None, refresh_work_relationships=False
 ):
     image_urls = list(matched_image_urls or [])
     keep_existing_genres = as_bool(pref('keep_existing_genres', False))
@@ -1354,8 +1603,19 @@ def enrich_and_apply_book_artwork(
             or (provider == 'googlebooks' and googlebooks_enabled())
         )
     ]
+    include_work_identity = work_identity_enabled() and openlibrary_enabled()
+    include_work_publication = (
+        extended_player_metadata_enabled() and openlibrary_enabled()
+    )
+    if refresh_work_relationships:
+        if include_work_identity:
+            replace_work_identity(metadata.moods, '')
+        if include_work_publication:
+            replace_openlibrary_v3_metadata(metadata.moods, {})
     if active_providers and needs_book_enrichment(
-        metadata, keep_existing_genres, needs_fallback_cover
+        metadata, keep_existing_genres, needs_fallback_cover,
+        include_work_identity, include_work_publication,
+        refresh_work_relationships
     ):
         embedded = embedded or embedded_identity_from_paths(media_file_paths(media))
         embedded_isbns = embedded.get('isbns')
@@ -1364,7 +1624,9 @@ def enrich_and_apply_book_artwork(
             if budget.remaining <= 0:
                 break
             if not needs_book_enrichment(
-                metadata, keep_existing_genres, needs_fallback_cover
+                metadata, keep_existing_genres, needs_fallback_cover,
+                include_work_identity, include_work_publication,
+                refresh_work_relationships
             ):
                 break
             if provider == 'openlibrary':
@@ -1375,6 +1637,10 @@ def enrich_and_apply_book_artwork(
                     image_urls, budget
                 )
             elif provider == 'googlebooks':
+                if not needs_regular_book_enrichment(
+                    metadata, keep_existing_genres, needs_fallback_cover
+                ):
+                    continue
                 apply_googlebooks_enrichment(
                     metadata, identity_product, title,
                     (authors or [''])[0], language, embedded_isbns,
@@ -1923,6 +2189,10 @@ class VocalisMetaAlbum(Agent.Album):
         )
 
     def update(self, metadata, media, lang, force):
+        # Preference changes must take effect even when a later provider lookup
+        # fails. Remove only optional contract namespaces owned by VocalisMeta;
+        # author Moods and custom user values remain untouched.
+        prune_disabled_contract_moods(metadata.moods)
         librivox_id = split_librivox_id(metadata.id)
         if librivox_id:
             self.update_librivox(metadata, media, lang, force, librivox_id)
@@ -1938,11 +2208,19 @@ class VocalisMetaAlbum(Agent.Album):
                 'WARN',
                 'Open Library match IDs are no longer supported; use Fix Match to select an Audible edition'
             )
+            log_album_update_summary(
+                metadata, 'preserved', 'legacy_openlibrary',
+                'unsupported_legacy_identity', forced=force
+            )
             return
         asin, region = split_id(metadata.id, to_text(pref('region', 'us')))
         asin = to_text(asin).strip().upper()
         if not valid_asin(asin):
             log('ERROR', 'Refusing metadata update with malformed ASIN: %s', asin)
+            log_album_update_summary(
+                metadata, 'rejected', 'audible', 'malformed_identity',
+                forced=force
+            )
             return
         product = fetch_product(asin, region)
         if not product:
@@ -1951,9 +2229,14 @@ class VocalisMetaAlbum(Agent.Album):
                 'No exact Audible product found for ASIN %s in region %s; existing metadata was preserved',
                 asin, region
             )
+            log_album_update_summary(
+                metadata, 'preserved', 'audible', 'product_not_found',
+                forced=force
+            )
             return
 
         include_subtitle = as_bool(pref('include_subtitle', True), True)
+        previous_title = to_text(metadata.title).strip()
         title = display_title(product, include_subtitle)
         if as_bool(pref('simplify_title', False)):
             title = primary_title(product.get('title'))
@@ -2008,20 +2291,29 @@ class VocalisMetaAlbum(Agent.Album):
         active_abridged = product_abridged(product)
         if active_abridged is None:
             active_abridged = embedded.get('abridged')
+        previous_work_identities = existing_work_identities(metadata.moods)
+        player_tags = existing_v3_enrichment_tags(metadata.moods)
+        player_tags.extend(audible_v3_tags(product))
         moods = relationship_moods(
             active_authors, active_series,
             text_field(product.get('language')) or embedded.get('language'),
-            active_abridged
+            active_abridged, previous_work_identities, player_tags
         )
         replace_container(metadata.moods, moods)
 
         enrich_and_apply_book_artwork(
             metadata, media, product, display_title(product, False),
             active_authors, lang,
-            image_candidates(product, pref('image_size', 2000)), embedded
+            image_candidates(product, pref('image_size', 2000)), embedded,
+            work_relationship_refresh_required(
+                previous_title, title, force
+            )
         )
 
         log('INFO', 'Updated audiobook "%s" (%s)', title, metadata.id)
+        log_album_update_summary(
+            metadata, 'updated', 'audible', 'ok', title, force
+        )
 
     def update_librivox(self, metadata, media, lang, force, book_id):
         book = fetch_librivox_book(book_id)
@@ -2031,7 +2323,12 @@ class VocalisMetaAlbum(Agent.Album):
                 'No exact LibriVox project found for ID %s; existing metadata was preserved',
                 book_id
             )
+            log_album_update_summary(
+                metadata, 'preserved', 'librivox', 'project_not_found',
+                forced=force
+            )
             return
+        previous_title = to_text(metadata.title).strip()
         title = text_field(book.get('title'))
         embedded = embedded_identity_from_paths(media_file_paths(media))
         local_series = (
@@ -2070,23 +2367,33 @@ class VocalisMetaAlbum(Agent.Album):
             book_readers = book_readers or embedded.get('narrators') or []
         if book_readers:
             replace_container(metadata.styles, book_readers)
+        previous_work_identities = existing_work_identities(metadata.moods)
+        player_tags = existing_v3_enrichment_tags(metadata.moods)
+        player_tags.extend(librivox_v3_tags(book))
         moods = relationship_moods(
             book_authors, local_series,
             librivox_language(book) or embedded.get('language'),
-            embedded.get('abridged')
+            embedded.get('abridged'), previous_work_identities, player_tags
         )
         replace_container(metadata.moods, moods)
 
         enrich_and_apply_book_artwork(
             metadata, media, book, title, book_authors,
-            librivox_language(book) or lang, librivox_cover_urls(book), embedded
+            librivox_language(book) or lang, librivox_cover_urls(book), embedded,
+            work_relationship_refresh_required(
+                previous_title, title, force
+            )
         )
         log('INFO', 'Updated LibriVox audiobook "%s" (%s)', title, metadata.id)
+        log_album_update_summary(
+            metadata, 'updated', 'librivox', 'ok', title, force
+        )
 
     def update_local(
         self, metadata, media, lang, force, identity_kind, identity_value
     ):
         """Preserve local metadata and enrich only fields that are missing."""
+        previous_title = to_text(metadata.title).strip()
         embedded = embedded_identity_from_paths(media_file_paths(media))
         title = (
             media_value(media, 'album') or media_value(media, 'title')
@@ -2125,20 +2432,29 @@ class VocalisMetaAlbum(Agent.Album):
         )
         if local_narrators and not metadata.styles:
             replace_container(metadata.styles, local_narrators)
+        previous_work_identities = existing_work_identities(metadata.moods)
+        player_tags = existing_v3_enrichment_tags(metadata.moods)
         moods = relationship_moods(
             embedded.get('authors') or ([author] if author else []),
-            local_series, embedded.get('language'), embedded.get('abridged')
+            local_series, embedded.get('language'), embedded.get('abridged'),
+            previous_work_identities, player_tags
         )
         if moods:
             replace_container(metadata.moods, moods)
 
         enrich_and_apply_book_artwork(
             metadata, media, {}, title, [author] if author else [],
-            embedded.get('language') or '', [], embedded
+            embedded.get('language') or '', [], embedded,
+            work_relationship_refresh_required(
+                previous_title, title, force
+            )
         )
         log(
             'INFO', 'Updated local audiobook "%s" (%s:%s)',
             title, identity_kind, identity_value
+        )
+        log_album_update_summary(
+            metadata, 'updated', 'local', 'ok', title, force
         )
 
     @staticmethod

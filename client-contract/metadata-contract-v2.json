@@ -1,0 +1,32 @@
+{
+  "contract": "VocalisMeta Work Identity Contract",
+  "contract_version": 2,
+  "status": "stable",
+  "compatibility": "additive_opt_in",
+  "extends": "metadata-contract-v1.json",
+  "bundle_version": "0.1.0",
+  "plex": {
+    "storage_field": "Mood",
+    "preference": "store_work_identity_as_mood",
+    "default_enabled": false
+  },
+  "work_identity": {
+    "mood_prefix": "Work-ID: ",
+    "identifier_regex": "^openlibrary:(OL[0-9]+W)$",
+    "canonical_template": "spokenmeta:work:openlibrary:{work_id}",
+    "scope": "literary_work",
+    "source": "Open Library",
+    "confidence": "authoritative_provider_match",
+    "multiple": false,
+    "progress_owner": false,
+    "grouping_only": true
+  },
+  "rules": [
+    "recording_identity_remains_progress_owner",
+    "work_identity_may_group_recordings_and_editions",
+    "do_not_merge_progress_by_work_identity",
+    "clients_must_exclude_Work-ID_moods_from_author_index",
+    "missing_work_identity_means_unknown",
+    "invalid_work_identity_must_be_ignored"
+  ]
+}

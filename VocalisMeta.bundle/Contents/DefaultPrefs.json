@@ -101,6 +101,18 @@
     "default": "true"
   },
   {
+    "id": "store_work_identity_as_mood",
+    "label": "Store Open Library Work-ID Mood for Contract v2 audiobook players",
+    "type": "bool",
+    "default": "false"
+  },
+  {
+    "id": "store_extended_player_metadata",
+    "label": "Store Contract v3 contributor, publication, production, and rating Moods",
+    "type": "bool",
+    "default": "false"
+  },
+  {
     "id": "embedded_series_fallback",
     "label": "Use embedded series when the matched source has no series",
     "type": "bool",

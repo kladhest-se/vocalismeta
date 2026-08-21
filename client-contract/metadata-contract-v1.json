@@ -1,0 +1,170 @@
+{
+  "contract": "VocalisMeta Client Identity Contract",
+  "contract_version": 1,
+  "status": "stable",
+  "compatibility": "additive",
+  "bundle_version": "0.1.0",
+  "plex": {
+    "provider": "com.plexapp.agents.spokenmeta",
+    "provider_guid_prefix": "com.plexapp.agents.spokenmeta://",
+    "hierarchy": {
+      "artist": "primary_author",
+      "album": "audiobook_recording",
+      "track": "audio_part"
+    },
+    "address_fields": [
+      "machineIdentifier",
+      "ratingKey"
+    ],
+    "guid_locations": [
+      "guid_attribute",
+      "Guid_child"
+    ]
+  },
+  "identity": {
+    "canonical_prefix": "spokenmeta:",
+    "fallback_template": "plex:{machineIdentifier}:{ratingKey}",
+    "audible_regions": [
+      "au",
+      "ca",
+      "de",
+      "es",
+      "fr",
+      "in",
+      "it",
+      "jp",
+      "uk",
+      "us"
+    ],
+    "guid_parsing": [
+      "require_supported_provider",
+      "strip_query",
+      "strip_numeric_model_suffix",
+      "url_decode_identifier",
+      "match_identity_form"
+    ],
+    "forms": [
+      {
+        "name": "audible_recording",
+        "scope": "book",
+        "strength": "strong",
+        "identifier_regex": "^([A-Z0-9]{10})_(au|ca|de|es|fr|in|it|jp|uk|us)$",
+        "canonical_template": "spokenmeta:audible:{region}:{asin}",
+        "normalization": {
+          "asin": "uppercase",
+          "region": "lowercase"
+        }
+      },
+      {
+        "name": "librivox_project",
+        "scope": "book",
+        "strength": "strong",
+        "identifier_regex": "^librivox:([1-9][0-9]{0,9})$",
+        "canonical_template": "spokenmeta:librivox:{decimal_id}"
+      },
+      {
+        "name": "isbn_edition",
+        "scope": "book",
+        "strength": "strong",
+        "identifier_regex": "^isbn:([0-9]{13})$",
+        "validation": "isbn13_checksum",
+        "canonical_template": "spokenmeta:isbn:{isbn13}"
+      },
+      {
+        "name": "local_fingerprint",
+        "scope": "book",
+        "strength": "lower_confidence",
+        "identifier_regex": "^local:([0-9a-fA-F]{16})$",
+        "canonical_template": "spokenmeta:local:{lowercase_hex}"
+      },
+      {
+        "name": "name_backed_artist",
+        "scope": "artist",
+        "strength": "relationship_only",
+        "identifier_regex": "^name:(.+)_(au|ca|de|es|fr|in|it|jp|uk|us)$",
+        "canonical_template": null
+      }
+    ],
+    "rules": [
+      "ratingKey_is_server_local",
+      "artist_identity_is_not_book_identity",
+      "audible_region_is_part_of_recording_identity",
+      "do_not_merge_distinct_local_identities_by_title_alone"
+    ]
+  },
+  "fields": {
+    "Artist": "primary_author",
+    "Album": "audiobook_recording",
+    "Track": "audio_part",
+    "Mood_unreserved": "additional_author",
+    "Style": "narrator_or_reader",
+    "Genre": "book_genre",
+    "title_sort": "provider_or_embedded_series_sort_key",
+    "Poster": "cover_artwork",
+    "Collection": "user_managed_plex_grouping"
+  },
+  "relationships": {
+    "mood_namespaces": [
+      {
+        "prefix": "Series: ",
+        "meaning": "series_membership",
+        "value": "display_name",
+        "multiple": true
+      },
+      {
+        "prefix": "Sequence: ",
+        "meaning": "series_position",
+        "grammar": "{series_name} #{position}",
+        "split_at": "final_space_hash",
+        "multiple": true
+      },
+      {
+        "prefix": "Language: ",
+        "meaning": "recording_language",
+        "multiple": false
+      },
+      {
+        "prefix": "Edition: ",
+        "meaning": "recording_abridgment",
+        "allowed_values": [
+          "Abridged",
+          "Unabridged"
+        ],
+        "multiple": false
+      }
+    ],
+    "unreserved_mood": "additional_author",
+    "sequence_position_type": "string_with_optional_numeric_value",
+    "series_total": "not_authoritative",
+    "collection_policy": "leave_untouched"
+  },
+  "progress": {
+    "owner": "album_recording_identity",
+    "playback_address": "plex_server_and_rating_key",
+    "strong_identity_merge": {
+      "position": "furthest_credible",
+      "activity": "latest_timestamp",
+      "bookmarks": "set_union",
+      "completed": "true_if_either"
+    },
+    "forbidden_merge_keys": [
+      "raw_ratingKey",
+      "title_only",
+      "artist_identity"
+    ]
+  },
+  "artwork": {
+    "client_source": "plex_thumb_or_poster_key",
+    "authentication": "normal_plex_token",
+    "provider_urls_are_not_a_client_contract": true
+  },
+  "chapters": {
+    "agent_manufactures_chapters": false,
+    "agent_renames_tracks": false,
+    "client_precedence": [
+      "plex_chapter_metadata",
+      "embedded_chapter_markers",
+      "track_boundaries"
+    ]
+  }
+}

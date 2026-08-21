@@ -1,0 +1,80 @@
+{
+  "contract": "VocalisMeta Extended Player Metadata Contract",
+  "contract_version": 3,
+  "status": "stable",
+  "compatibility": "additive_opt_in",
+  "extends": "metadata-contract-v2.json",
+  "bundle_version": "0.1.0",
+  "plex": {
+    "storage_field": "Mood",
+    "preference": "store_extended_player_metadata",
+    "default_enabled": false,
+    "player_provider_access_required": false
+  },
+  "reserved_mood_namespaces": [
+    {
+      "prefix": "Contributor-ID: ",
+      "grammar": "{role}:{source}:{identifier} = {display_name}",
+      "canonical_template": "spokenmeta:contributor:{role}:{source}:{identifier}",
+      "roles": [
+        "author",
+        "narrator"
+      ],
+      "source_identifier_regex": {
+        "audible": "^[A-Z0-9]{10}$",
+        "librivox": "^[1-9][0-9]{0,9}$",
+        "openlibrary": "^OL[0-9]+A$"
+      },
+      "multiple": true
+    },
+    {
+      "prefix": "Work-Published: ",
+      "meaning": "first_publication_year",
+      "value_regex": "^[1-9][0-9]{0,3}$",
+      "source": "Open Library",
+      "multiple": false
+    },
+    {
+      "prefix": "Production: ",
+      "meaning": "explicit_recording_production_type",
+      "allowed_values": [
+        "Single narrator",
+        "Multi-narrator",
+        "Full cast",
+        "Dramatized",
+        "Community recording"
+      ],
+      "inference_forbidden": true,
+      "multiple": false
+    },
+    {
+      "prefix": "Rating-Source: ",
+      "meaning": "album_rating_provider",
+      "allowed_values": [
+        "Audible"
+      ],
+      "multiple": false
+    },
+    {
+      "prefix": "Rating-Count: ",
+      "meaning": "album_rating_vote_count",
+      "value_regex": "^[0-9]+$",
+      "multiple": false
+    }
+  ],
+  "date_contract": {
+    "recording_release": "Plex originally_available_at",
+    "work_first_publication": "Work-Published Mood",
+    "must_not_overwrite_recording_release_with_work_date": true
+  },
+  "rules": [
+    "all_v3_prefixes_are_reserved_and_must_not_be_indexed_as_authors",
+    "contributor_display_name_is_not_a_stable_identity",
+    "contributor_identifier_is_authoritative_only_with_a_valid_source_id",
+    "missing_metadata_means_unknown",
+    "production_type_must_not_be_inferred_from_narrator_count",
+    "rating_count_is_meaningful_only_with_rating_source",
+    "recording_identity_remains_progress_owner",
+    "work_identity_remains_grouping_only"
+  ]
+}
