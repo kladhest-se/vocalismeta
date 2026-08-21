@@ -33,10 +33,11 @@
 - Parseable series sequence, language, and abridged-edition Mood namespaces.
 - Documented Client Identity Contract v1 and player-integration guide.
 - Machine-readable Client Identity Contract v1 with shared compatibility test vectors.
-- Optional Open Library work identity with additive Client Contract v2 and
-  shared player test vectors.
-- Optional provider-backed contributor IDs, first-publication year, explicit
-  production type, and rating provenance with Client Contract v3 vectors.
+- Default-on Open Library work identity with configurable Client Contract v2
+  and shared player test vectors.
+- Default-on provider-backed contributor IDs, first-publication year, explicit
+  production type, and rating provenance with configurable Contract v3 vectors.
+- Public release and developer installers with startup validation and rollback.
 - Safe cleanup of disabled Contract v2 and v3 Mood namespaces on refresh.
 - Work and Open Library contributor relationship revalidation after rematches.
 - Google Books missing-field enrichment using exact ISBN or title and author.

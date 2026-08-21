@@ -764,11 +764,11 @@ def sort_title_with_series_fallback(product, title, fallback_entries):
 
 
 def work_identity_enabled():
-    return as_bool(pref('store_work_identity_as_mood', False), False)
+    return as_bool(pref('store_work_identity_as_mood', True), True)
 
 
 def extended_player_metadata_enabled():
-    return as_bool(pref('store_extended_player_metadata', False), False)
+    return as_bool(pref('store_extended_player_metadata', True), True)
 
 
 def prune_disabled_contract_moods(container):

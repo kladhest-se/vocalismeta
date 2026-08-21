@@ -27,34 +27,16 @@ Apple TV.
 
 ## Install on Linux
 
-The commands below install the immutable `v0.1.0` release into Plex's standard
-Linux plug-in directory. Change `PLUGIN_DIR` if your Plex data directory is
-different.
+The installer downloads VocalisMeta, validates it, replaces the existing bundle,
+restarts Plex, checks the plug-in log, and restores the previous installation if
+startup fails.
+
+Install the immutable `v0.1.0` release:
 
 ```bash
-git --version
-
-VOCALISMETA_VERSION='v0.1.0'
-VOCALISMETA_REPOSITORY='https://github.com/kladhest-se/vocalismeta.git'
-PLUGIN_DIR='/var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-ins'
-CHECKOUT_DIR="$(mktemp -d /tmp/VocalisMeta.XXXXXXXX)" &&
-git -C "$CHECKOUT_DIR" init --quiet &&
-git -C "$CHECKOUT_DIR" remote add origin "$VOCALISMETA_REPOSITORY" &&
-git -C "$CHECKOUT_DIR" fetch --quiet --depth 1 origin \
-  "refs/tags/$VOCALISMETA_VERSION:refs/tags/$VOCALISMETA_VERSION" &&
-git -C "$CHECKOUT_DIR" checkout --quiet --detach \
-  "$VOCALISMETA_VERSION^{commit}" &&
-test "$(git -C "$CHECKOUT_DIR" describe --tags --exact-match)" = \
-  "$VOCALISMETA_VERSION" &&
-sudo mkdir -p "$PLUGIN_DIR" &&
-sudo rm -rf -- "$PLUGIN_DIR/VocalisMeta.bundle" &&
-sudo cp -a "$CHECKOUT_DIR/VocalisMeta.bundle" \
-  "$PLUGIN_DIR/VocalisMeta.bundle" &&
-sudo chown -R plex:plex "$PLUGIN_DIR/VocalisMeta.bundle" &&
-sudo systemctl restart plexmediaserver &&
-sudo systemctl is-active --quiet plexmediaserver &&
-rm -rf -- "$CHECKOUT_DIR" &&
-echo "VocalisMeta $VOCALISMETA_VERSION installed and Plex is active."
+curl -fsSL \
+  https://raw.githubusercontent.com/kladhest-se/vocalismeta/main/scripts/install-on-plex.sh |
+  sudo bash -s -- --release v0.1.0
 ```
 
 ### Developer build
@@ -64,25 +46,9 @@ Use this only when testing the latest unpublished changes from GitHub. The
 tag.
 
 ```bash
-git --version
-
-VOCALISMETA_BRANCH='main'
-VOCALISMETA_REPOSITORY='https://github.com/kladhest-se/vocalismeta.git'
-PLUGIN_DIR='/var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-ins'
-CHECKOUT_DIR="$(mktemp -d /tmp/VocalisMeta-dev.XXXXXXXX)" &&
-git clone --quiet --depth 1 --single-branch \
-  --branch "$VOCALISMETA_BRANCH" \
-  "$VOCALISMETA_REPOSITORY" "$CHECKOUT_DIR" &&
-REVISION="$(git -C "$CHECKOUT_DIR" rev-parse --short HEAD)" &&
-sudo mkdir -p "$PLUGIN_DIR" &&
-sudo rm -rf -- "$PLUGIN_DIR/VocalisMeta.bundle" &&
-sudo cp -a "$CHECKOUT_DIR/VocalisMeta.bundle" \
-  "$PLUGIN_DIR/VocalisMeta.bundle" &&
-sudo chown -R plex:plex "$PLUGIN_DIR/VocalisMeta.bundle" &&
-sudo systemctl restart plexmediaserver &&
-sudo systemctl is-active --quiet plexmediaserver &&
-rm -rf -- "$CHECKOUT_DIR" &&
-echo "VocalisMeta developer build $REVISION installed and Plex is active."
+curl -fsSL \
+  https://raw.githubusercontent.com/kladhest-se/vocalismeta/main/scripts/install-on-plex.sh |
+  sudo bash -s -- --developer
 ```
 
 Then configure Plex:
