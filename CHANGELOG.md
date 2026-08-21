@@ -32,8 +32,17 @@
 - App-friendly author, narrator, and series tags without changing Plex collections.
 - Parseable series sequence, language, and abridged-edition Mood namespaces.
 - Documented Client Identity Contract v1 and player-integration guide.
+- Machine-readable Client Identity Contract v1 with shared compatibility test vectors.
+- Optional Open Library work identity with additive Client Contract v2 and
+  shared player test vectors.
+- Optional provider-backed contributor IDs, first-publication year, explicit
+  production type, and rating provenance with Client Contract v3 vectors.
+- Safe cleanup of disabled Contract v2 and v3 Mood namespaces on refresh.
+- Work and Open Library contributor relationship revalidation after rematches.
 - Google Books missing-field enrichment using exact ISBN or title and author.
 - Configurable Open Library/Google Books priority and enrichment request budget.
+- Short-lived book-provider search caching with safe uncached malformed-response
+  retries.
 - Optional LibriVox fallback matching with distinct project IDs, readers,
   durations, genres, and covers.
 - LibriVox-first matching and Audible cross-match protection for media paths
@@ -42,6 +51,8 @@
   search caching and safe uncached retry for malformed responses.
 - One-line structured search summaries with provider, identity, author source,
   candidate counts, and stable outcome reasons.
+- One-line structured metadata-refresh summaries for successful and early-exit
+  update paths.
 - Provider-failure classification that defers local fallback after network,
   HTTP, malformed-response, or partial regional catalog failures.
 - Optional strict JSON configuration with safe reloads and secret-file support.

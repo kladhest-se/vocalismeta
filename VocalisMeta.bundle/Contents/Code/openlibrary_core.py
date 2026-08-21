@@ -41,6 +41,14 @@ def normalize_work_id(value):
     return value if WORK_ID_RE.match(value) else ''
 
 
+def work_identity(value):
+    """Return the stable client work identity for an Open Library result."""
+    if isinstance(value, dict):
+        value = value.get('key')
+    work_id = normalize_work_id(value)
+    return 'openlibrary:' + work_id if work_id else ''
+
+
 def work_url(value):
     work_id = normalize_work_id(value.get('key') if isinstance(value, dict) else value)
     return OPENLIBRARY_BASE + '/works/' + work_id + '.json' if work_id else ''

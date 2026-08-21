@@ -11,8 +11,24 @@ runs inside Plex Media Server. It does not expose a separate REST service and
 does not require an Audnexus service. A player reads the resulting metadata
 through the normal authenticated Plex API.
 
-The contract version is **Client Identity Contract v1**. The bundle's static
-development version remains **0.1.0**.
+The base recording contract is **Client Identity Contract v1**. The optional
+literary-work extension is **Work Identity Contract v2**. The bundle's static
+extended relationship and provenance layer is **Extended Player Metadata
+Contract v3**. The bundle's static development version remains **0.1.0**.
+
+The normative machine-readable files are:
+
+- [`client-contract/metadata-contract-v1.json`](client-contract/metadata-contract-v1.json)
+- [`client-contract/test-vectors-v1.json`](client-contract/test-vectors-v1.json)
+- [`client-contract/metadata-contract-v2.json`](client-contract/metadata-contract-v2.json)
+- [`client-contract/test-vectors-v2.json`](client-contract/test-vectors-v2.json)
+- [`client-contract/metadata-contract-v3.json`](client-contract/metadata-contract-v3.json)
+- [`client-contract/test-vectors-v3.json`](client-contract/test-vectors-v3.json)
+
+VocalisMeta executes every published vector in its own test suite. Client
+projects should run the same vectors in CI. The JSON contract is build-time
+integration data; it is not a Plex service endpoint and is not written into
+user-visible metadata.
 
 The public product name changed from SpokenMeta to VocalisMeta without changing
 the wire contract. The Plex provider remains
@@ -37,14 +53,22 @@ Use the music hierarchy as follows:
 | `Sequence: <name> #<position>` Mood | Series position | Ordering and “next in series” |
 | `Language: <name>` Mood | Recording language | Display/filter when known |
 | `Edition: Abridged` or `Edition: Unabridged` Mood | Recording edition | Display/filter when known |
+| `Work-ID: openlibrary:<work-id>` Mood | Optional literary-work identity | Group recordings/editions; never own progress |
+| `Contributor-ID: <role>:<source>:<id> = <name>` Mood | Optional stable person relationship | Merge provider-backed contributor spellings |
+| `Work-Published: <year>` Mood | First publication year | Display separately from recording release |
+| `Production: <type>` Mood | Explicit production type | Display/filter without cast-size inference |
+| `Rating-Source: <source>` / `Rating-Count: <count>` Mood | Rating provenance | Interpret Plex album rating confidence |
 | Style | Narrator or LibriVox reader | Narrator pages and filtering |
 | Genre | Book genre | Genre browsing |
 | `title_sort` | Provider/embedded series sort key | Plex-compatible album ordering |
 | Poster | Cover artwork | Book artwork |
 | Collection | User-managed Plex grouping | Leave untouched |
 
-Do not interpret a raw Mood as an author before checking the four reserved
-prefixes: `Series: `, `Sequence: `, `Language: `, and `Edition: `.
+Do not interpret a raw Mood as an author before checking every reserved prefix:
+`Series: `, `Sequence: `, `Language: `, `Edition: `, `Work-ID: `,
+`Contributor-ID: `, `Work-Published: `, `Production: `, `Rating-Source: `, and
+`Rating-Count: `. Contract v2 and v3 prefixes appear only when their opt-in
+preferences are enabled.
 
 ## Durable identity
 
@@ -234,6 +258,76 @@ the absence of the tag.
 Audible narrators, LibriVox readers, or enabled embedded contributor fallbacks
 are stored as exact Style values. Multiple styles mean multiple narrators.
 
+### Work identity versus recording identity
+
+The album GUID and its Contract v1 canonical key identify the exact audiobook
+recording or edition. They own progress, bookmarks, listening history, and
+completion.
+
+When **Store Open Library Work-ID Mood for Contract v2 audiobook players** is
+enabled, VocalisMeta may also emit:
+
+```text
+Work-ID: openlibrary:OL12345W
+```
+
+After validation, the client canonical key is:
+
+```text
+spokenmeta:work:openlibrary:OL12345W
+```
+
+This is an authoritative Open Library Work match and may group editions,
+languages, narrators, or providers that represent the same literary work. It
+must not merge playback state: two recordings can have different duration,
+chapter layout, abridgment, and narration. Treat a missing or invalid Work-ID
+as unknown and do not manufacture one from title and author.
+
+Contract v2 is opt-in and disabled by default. Enabling it can cause a cached
+Open Library lookup during a Plex metadata refresh for an album that lacks the
+tag. The resulting value is stored in Plex; the player still communicates only
+with Plex and never needs Open Library access or a companion service.
+
+### Contract v3 extended player metadata
+
+Contract v3 adds provider-backed metadata that is useful to an audiobook
+player but has no dedicated legacy Plex music field. It is disabled by default.
+
+Contributor identities use:
+
+```text
+Contributor-ID: author:audible:B00G0WYW92 = Andy Weir
+Contributor-ID: author:openlibrary:OL2162289A = Andy Weir
+Contributor-ID: narrator:librivox:20 = Ray Example
+```
+
+Split once at ` = ` to separate the stable role/source/identifier tuple from
+the display name. Validate the source-specific identifier before using it.
+Supported roles are currently `author` and `narrator`; supported sources are
+`audible`, `openlibrary`, and `librivox`. Names remain display values and must
+not be used as stable person keys.
+
+After validation, form the provider-scoped contributor key as:
+
+```text
+spokenmeta:contributor:<role>:<source>:<identifier>
+```
+
+Do not merge two different provider-scoped keys solely because their display
+names match.
+
+`Work-Published: <year>` is the literary work's first publication year from an
+authoritative Open Library match. Plex `originally_available_at` remains the
+audiobook recording release date. Keep both values.
+
+`Production:` is emitted only for explicit provider values such as `Full cast`,
+`Dramatized`, or `Community recording`. Never derive it from the number of
+narrators. A Plex album rating may be accompanied by `Rating-Source: Audible`
+and `Rating-Count: <integer>`; do not interpret a count without a valid source.
+
+All Contract v3 values come from Plex metadata. The player does not call
+Audible, Open Library, Google Books, or LibriVox directly.
+
 ## Source precedence and trust
 
 The identity/search order is:
@@ -314,6 +408,16 @@ or a `Guid` child. Support both. Prefer the GUID whose provider is
 
 ## Contract test vectors
 
+The compact table below is provided for human readers. The complete normative
+set, including invalid-provider, checksum, normalization, multiple-series, and
+unknown-facet cases, is in
+[`client-contract/test-vectors-v1.json`](client-contract/test-vectors-v1.json).
+Contract v2 work-identity cases are in
+[`client-contract/test-vectors-v2.json`](client-contract/test-vectors-v2.json).
+Contract v3 contributor, date, production, rating, and malformed-value cases
+are in
+[`client-contract/test-vectors-v3.json`](client-contract/test-vectors-v3.json).
+
 | Input | Expected result |
 | --- | --- |
 | `com.plexapp.agents.spokenmeta://B08G9PRS1K_us?lang=en` | `spokenmeta:audible:us:B08G9PRS1K` |
@@ -330,6 +434,12 @@ or a `Guid` child. Support both. Prefer the GUID whose provider is
 - Store the current server and rating key separately from the canonical book key.
 - Migrate legacy raw-rating-key progress without losing bookmarks or completion.
 - Exclude reserved Mood namespaces from the author index.
+- If supporting Contract v2, validate `Work-ID:` and use it only for grouping.
+- Never merge progress, bookmarks, completion, or history by work identity.
+- If supporting Contract v3, reserve all five new prefixes before author parsing.
+- Validate contributor IDs by source and treat their names as display values.
+- Keep work publication year separate from Plex's recording release date.
+- Never infer production type from narrator or track count.
 - Pair `Series:` with every matching `Sequence:` tag; support multiple series.
 - Display language and abridgment only when their Mood exists.
 - Read narrator names from Style.
@@ -338,6 +448,7 @@ or a `Guid` child. Support both. Prefer the GUID whose provider is
 - Keep chapter resolution in the player; do not depend on agent-created tracks.
 - Test the six identity vectors above and cross-server rating-key collisions.
 
-This contract is additive. Existing Audible and LibriVox identifiers do not
-change. Future contract changes should introduce a documented new contract
-version rather than silently reinterpreting these v1 forms.
+These contracts are additive. Existing Audible and LibriVox identifiers do not
+change, and Contracts v2 and v3 do not reinterpret Contract v1 recording keys.
+Future changes should introduce a documented new contract version rather than
+silently changing an existing version.

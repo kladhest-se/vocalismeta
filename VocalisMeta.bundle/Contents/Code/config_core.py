@@ -265,6 +265,7 @@ def load_config_file(path):
             'include_subtitle', 'simplify_title', 'keep_existing_genres',
             'authors_as_moods', 'series_as_moods', 'embedded_series_fallback',
             'embedded_contributor_fallback', 'author_genres',
+            'work_identity_as_mood', 'extended_player_metadata',
         ))
         copy_boolean_values(metadata, values, (
             ('include_subtitle', 'include_subtitle'),
@@ -272,6 +273,8 @@ def load_config_file(path):
             ('keep_existing_genres', 'keep_existing_genres'),
             ('authors_as_moods', 'store_authors_as_moods'),
             ('series_as_moods', 'series_as_moods'),
+            ('work_identity_as_mood', 'store_work_identity_as_mood'),
+            ('extended_player_metadata', 'store_extended_player_metadata'),
             ('embedded_series_fallback', 'embedded_series_fallback'),
             ('embedded_contributor_fallback', 'embedded_contributor_fallback'),
             ('author_genres', 'author_genres'),

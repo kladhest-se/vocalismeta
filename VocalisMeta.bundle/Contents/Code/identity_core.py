@@ -24,6 +24,7 @@ from openlibrary_core import equivalent_isbns
 LIBRIVOX_ID_RE = re.compile(r'^librivox:([1-9][0-9]{0,9})$', re.I)
 LOCAL_ID_RE = re.compile(r'^local:([0-9a-f]{16})$', re.I)
 PLEX_SUFFIX_RE = re.compile(r'/-?[0-9]+$')
+VOCALISMETA_GUID_PROVIDER = 'com.plexapp.agents.spokenmeta'
 
 
 def canonical_isbn(value):
@@ -103,8 +104,19 @@ def split_book_identity(value):
     return None, None
 
 
+def guid_provider(value):
+    """Return the provider portion of a full Plex GUID, when present."""
+    text = to_text(value).strip().replace('\\:', ':')
+    if '://' not in text:
+        return ''
+    return text.split('://', 1)[0].lower()
+
+
 def client_identity(value):
     """Parse a VocalisMeta metadata ID or Plex GUID into contract-v1 fields."""
+    provider = guid_provider(value)
+    if provider and provider != VOCALISMETA_GUID_PROVIDER:
+        return None
     identifier = plex_identifier_from_guid(value)
     try:
         identifier = to_text(unquote_plus(identifier))
@@ -131,3 +143,19 @@ def client_identity(value):
     if name:
         return {'provider': 'name', 'id': name, 'scope': 'artist'}
     return None
+
+
+def canonical_client_key(value):
+    """Return the documented contract-v1 cloud key for a book identity."""
+    parsed = client_identity(value)
+    if not parsed or parsed.get('scope') != 'book':
+        return ''
+    provider = parsed.get('provider')
+    identifier = parsed.get('id')
+    if provider == 'audible':
+        return 'spokenmeta:audible:%s:%s' % (
+            parsed.get('region', 'us'), identifier,
+        )
+    if provider in ('librivox', 'isbn', 'local'):
+        return 'spokenmeta:%s:%s' % (provider, identifier)
+    return ''

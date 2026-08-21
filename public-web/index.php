@@ -129,7 +129,8 @@ function e(string $value): string
     <div class="contract">
       <div><span class="contract-dot"></span><p>Stable identity contract</p></div>
       <code>spokenmeta:audible:us:B08G9PRS1K</code>
-      <p>Clients can use canonical book keys across Plex servers while local <code>ratingKey</code> values remain server-specific.</p>
+      <p>Clients can use stable recording and work keys plus optional Contract v3 contributor, publication, production, and rating metadata—all through Plex.</p>
+      <a href="<?= e($project['github_web']) ?>/blob/main/client-contract/metadata-contract-v3.json">Machine-readable contract v3 →</a>
     </div>
   </section>
 
