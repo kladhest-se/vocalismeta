@@ -474,6 +474,66 @@ def product_abridged(product):
     return None
 
 
+def presentation_traits(*values):
+    """Return explicit audiobook-presentation traits found in title text."""
+    combined = normalize_text(' '.join([
+        to_text(value) for value in values if to_text(value).strip()
+    ]))
+    traits = []
+    if (
+        'radio dramatisation' in combined or
+        'radio dramatization' in combined or
+        'radio drama' in combined or
+        'radio play' in combined or
+        'audio drama' in combined or
+        'dramatised' in combined or
+        'dramatized' in combined or
+        'dramatisation' in combined or
+        'dramatization' in combined
+    ):
+        traits.append('dramatization')
+    if 'full cast' in combined or 'fullcast' in combined:
+        traits.append('full_cast')
+    return traits
+
+
+def product_presentation_traits(product):
+    if not isinstance(product, dict):
+        return []
+    return presentation_traits(
+        text_field(product.get('title')),
+        text_field(product.get('subtitle')),
+    )
+
+
+def presentation_label(product):
+    if not isinstance(product, dict):
+        return ''
+    traits = product_presentation_traits(product)
+    combined = normalize_text('%s %s' % (
+        text_field(product.get('title')),
+        text_field(product.get('subtitle')),
+    ))
+    if 'dramatization' in traits:
+        if 'radio' in combined:
+            return 'Radio dramatisation'
+        return 'Dramatized adaptation'
+    if 'full_cast' in traits:
+        return 'Full cast'
+    return ''
+
+
+def presentation_mismatch_penalty(wanted_title, product):
+    """Demote explicitly different productions without hiding manual matches."""
+    wanted = presentation_traits(wanted_title)
+    actual = product_presentation_traits(product)
+    if 'dramatization' in actual and 'dramatization' not in wanted:
+        return 35
+    if 'full_cast' in actual and 'full_cast' not in wanted:
+        return 24
+    return 0
+
+
 def sequence_label(value):
     """Return a compact, client-parseable series position."""
     value = to_text(value).strip()
@@ -525,6 +585,9 @@ def release_year(product):
 def edition_details(product, region=''):
     """Return concise, deterministic details for Plex Fix Match labels."""
     output = []
+    presentation = presentation_label(product)
+    if presentation:
+        output.append(presentation)
     runtime = runtime_label(product)
     if runtime:
         output.append(runtime)
@@ -629,6 +692,7 @@ def score_product(wanted_title, wanted_author, wanted_language, product, rank=0,
     score = score - edition_penalty(
         product, duration_minutes, narrators, year, abridged
     )
+    score = score - presentation_mismatch_penalty(wanted_title, product)
     score = score - (min(int(rank), 9) * 0.35)
     return max(0, min(100, int(round(score))))
 
