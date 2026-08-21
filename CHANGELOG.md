@@ -21,11 +21,15 @@
 - Matched-parent author recovery when track Artist tags contain the narrator.
 - Stable VocalisMeta artist identities for unresolved compound author credits.
 - Stable Audible, LibriVox, ISBN, and local-fingerprint client identities.
+- Clean local-fallback titles for Open Library and Google Books enrichment.
 - Authoritative matched-source refreshes that replace stale provider metadata.
 - ASIN-backed parent-author recovery and short-lived Audible search caching.
 - Author recovery from alternate Plex parent fields, embedded tags, and
   validated `Author/Book/file` directory layouts when track Artist is a narrator.
 - Edition matching using runtime, narrator, language, year, and abridgment hints.
+- Presentation-aware matching that prevents ordinary audiobooks from
+  automatically matching radio dramatisations, dramatized adaptations, or
+  explicitly full-cast editions.
 - Plex-tree duration recovery and strong rejection of severe runtime mismatches.
 - Detailed Fix Match edition labels and normalized multi-series ordering.
 - Catalog schema validation and equivalent ISBN-10/ISBN-13 enrichment lookups.

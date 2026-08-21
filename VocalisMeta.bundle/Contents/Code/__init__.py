@@ -1414,6 +1414,19 @@ def append_local_search_result(
     return local_id
 
 
+def local_metadata_title(value):
+    """Recover the book title if Plex echoes our local search-result label."""
+    value = to_text(value).strip()
+    marker = ' — Local metadata'
+    if marker not in value:
+        return value
+    if value.startswith('"'):
+        closing_quote = value.find('"', 1)
+        if closing_quote > 1:
+            return value[1:closing_quote].strip()
+    return value.split(marker, 1)[0].strip('" ')
+
+
 def defer_provider_search(
     title, author, author_source, manual, provider_states,
     candidate_count=0, catalog_hits=0, audible_queries=0, score=None
@@ -2399,6 +2412,7 @@ class VocalisMetaAlbum(Agent.Album):
             media_value(media, 'album') or media_value(media, 'title')
             or media_value(media, 'name') or metadata.title
         ).strip()
+        title = local_metadata_title(title)
         author = author_name_from_guid(media_parent_guid(media))
         if not author and embedded.get('authors'):
             author = '; '.join(embedded.get('authors'))
