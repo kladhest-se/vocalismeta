@@ -57,6 +57,34 @@ rm -rf -- "$CHECKOUT_DIR" &&
 echo "VocalisMeta $VOCALISMETA_VERSION installed and Plex is active."
 ```
 
+### Developer build
+
+Use this only when testing the latest unpublished changes from GitHub. The
+`main` branch can change at any time and is less reproducible than a release
+tag.
+
+```bash
+git --version
+
+VOCALISMETA_BRANCH='main'
+VOCALISMETA_REPOSITORY='https://github.com/kladhest-se/vocalismeta.git'
+PLUGIN_DIR='/var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-ins'
+CHECKOUT_DIR="$(mktemp -d /tmp/VocalisMeta-dev.XXXXXXXX)" &&
+git clone --quiet --depth 1 --single-branch \
+  --branch "$VOCALISMETA_BRANCH" \
+  "$VOCALISMETA_REPOSITORY" "$CHECKOUT_DIR" &&
+REVISION="$(git -C "$CHECKOUT_DIR" rev-parse --short HEAD)" &&
+sudo mkdir -p "$PLUGIN_DIR" &&
+sudo rm -rf -- "$PLUGIN_DIR/VocalisMeta.bundle" &&
+sudo cp -a "$CHECKOUT_DIR/VocalisMeta.bundle" \
+  "$PLUGIN_DIR/VocalisMeta.bundle" &&
+sudo chown -R plex:plex "$PLUGIN_DIR/VocalisMeta.bundle" &&
+sudo systemctl restart plexmediaserver &&
+sudo systemctl is-active --quiet plexmediaserver &&
+rm -rf -- "$CHECKOUT_DIR" &&
+echo "VocalisMeta developer build $REVISION installed and Plex is active."
+```
+
 Then configure Plex:
 
 1. Open **Settings → Manage → Libraries**.
