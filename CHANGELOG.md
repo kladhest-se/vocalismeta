@@ -4,6 +4,8 @@
 
 ### Added
 
+- Active `0.1.1` development version reporting in the Plex bundle and runtime
+  startup log, while the immutable stable release remains `v0.1.0`.
 - Last-known-good author, series, sequence, language, edition, and valid
   Contract v3 metadata preservation when a provider refresh omits an existing
   relationship namespace.
@@ -11,6 +13,8 @@
   refresh summaries.
 - Exact multi-series client semantics that designate the first provider
   relationship as primary without unsafe fuzzy alias merging.
+- Stable and development installer summaries that report the installed bundle
+  version, install channel, and exact source revision.
 
 ## 0.1.0 - 2026-08-15
 

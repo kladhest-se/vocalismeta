@@ -14,7 +14,7 @@ through the normal authenticated Plex API.
 The base recording contract is **Client Identity Contract v1**. The optional
 literary-work extension is **Work Identity Contract v2**. The bundle's static
 extended relationship and provenance layer is **Extended Player Metadata
-Contract v3**. The bundle's static development version remains **0.1.0**.
+Contract v3**. The current development bundle version is **0.1.1**.
 
 The normative machine-readable files are:
 
