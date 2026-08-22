@@ -397,7 +397,7 @@ def set_request_status(request_status, ok, reason, status, attempts):
     request_status['attempts'] = attempts
 
 
-def request_json(url, cache_time=CACHE_1DAY, request_status=None):
+def request_json(url, cache_time=CACHE_1DAY, request_status=None, headers=None):
     last_error = None
     last_reason = 'provider_unavailable'
     last_status = None
@@ -416,7 +416,7 @@ def request_json(url, cache_time=CACHE_1DAY, request_status=None):
         try:
             response = HTTP.Request(
                 url, timeout=timeout, cacheTime=effective_cache_time,
-                immediate=True
+                immediate=True, headers=headers or {}
             )
             try:
                 body = response.content
@@ -1145,6 +1145,11 @@ def googlebooks_api_key():
     return to_text(pref('googlebooks_api_key', '')).strip()
 
 
+def googlebooks_request_headers():
+    key = googlebooks_api_key()
+    return {'X-Goog-Api-Key': key} if key else {}
+
+
 def googlebooks_enabled():
     return (
         as_bool(pref('googlebooks_enabled', True), True)
@@ -1441,7 +1446,10 @@ def fetch_googlebooks_isbn(isbn, budget=None):
     if not use_enrichment_request(budget, 'Google Books'):
         return []
     log('DEBUG', 'Google Books ISBN enrichment request: %s', isbn)
-    return googlebooks_volumes(request_json(url, BOOK_SEARCH_CACHE_SECONDS))
+    return googlebooks_volumes(request_json(
+        url, BOOK_SEARCH_CACHE_SECONDS,
+        headers=googlebooks_request_headers()
+    ))
 
 
 def fetch_googlebooks_volumes(
@@ -1457,7 +1465,10 @@ def fetch_googlebooks_volumes(
     if not use_enrichment_request(budget, 'Google Books'):
         return []
     log('DEBUG', 'Google Books title enrichment request: %s', title)
-    return googlebooks_volumes(request_json(url, BOOK_SEARCH_CACHE_SECONDS))
+    return googlebooks_volumes(request_json(
+        url, BOOK_SEARCH_CACHE_SECONDS,
+        headers=googlebooks_request_headers()
+    ))
 
 
 def fetch_librivox_book(book_id, provider_status=None):

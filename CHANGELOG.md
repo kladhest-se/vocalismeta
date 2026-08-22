@@ -15,6 +15,8 @@
   relationship as primary without unsafe fuzzy alias merging.
 - Stable and development installer summaries that report the installed bundle
   version, install channel, and exact source revision.
+- Google Books authentication through the `X-Goog-Api-Key` request header so
+  Plex networking logs no longer expose API keys in request URLs.
 
 ## 0.1.0 - 2026-08-15
 
