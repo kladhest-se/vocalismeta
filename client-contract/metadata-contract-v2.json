@@ -2,13 +2,13 @@
   "contract": "VocalisMeta Work Identity Contract",
   "contract_version": 2,
   "status": "stable",
-  "compatibility": "additive_configurable",
+  "compatibility": "additive_opt_in",
   "extends": "metadata-contract-v1.json",
   "bundle_version": "0.1.0",
   "plex": {
     "storage_field": "Mood",
     "preference": "store_work_identity_as_mood",
-    "default_enabled": true
+    "default_enabled": false
   },
   "work_identity": {
     "mood_prefix": "Work-ID: ",

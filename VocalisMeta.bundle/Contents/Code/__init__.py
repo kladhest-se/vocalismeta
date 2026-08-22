@@ -115,6 +115,10 @@ from client_metadata_core import (
 
 AGENT_NAME = 'VocalisMeta Agent'
 VERSION = '0.1.0'
+SERIES_MOOD_PREFIX = 'Series: '
+SEQUENCE_MOOD_PREFIX = 'Sequence: '
+LANGUAGE_MOOD_PREFIX = 'Language: '
+EDITION_MOOD_PREFIX = 'Edition: '
 WORK_ID_MOOD_PREFIX = 'Work-ID: '
 CONTRIBUTOR_ID_MOOD_PREFIX = 'Contributor-ID: '
 WORK_PUBLISHED_MOOD_PREFIX = 'Work-Published: '
@@ -326,6 +330,14 @@ def contract_v3_tag_count(container):
     return count
 
 
+def relationship_tag_count(container, prefix):
+    count = 0
+    for item in container:
+        if to_text(item).strip().startswith(prefix):
+            count += 1
+    return count
+
+
 def log_album_update_summary(
     metadata, outcome, provider, reason, title='', forced=False
 ):
@@ -345,6 +357,12 @@ def log_album_update_summary(
         'work_identity=' + diagnostic_value(work_identity),
         'extended_tags=' + diagnostic_value(
             contract_v3_tag_count(metadata.moods)
+        ),
+        'series_tags=' + diagnostic_value(
+            relationship_tag_count(metadata.moods, SERIES_MOOD_PREFIX)
+        ),
+        'sequence_tags=' + diagnostic_value(
+            relationship_tag_count(metadata.moods, SEQUENCE_MOOD_PREFIX)
         ),
         'posters=' + diagnostic_value(poster_count),
         'forced=' + diagnostic_value('true' if forced else 'false'),
@@ -746,6 +764,97 @@ def replace_container(container, values):
             container.add(value)
 
 
+def reserved_mood(value):
+    value = to_text(value).strip()
+    prefixes = (
+        SERIES_MOOD_PREFIX, SEQUENCE_MOOD_PREFIX, LANGUAGE_MOOD_PREFIX,
+        EDITION_MOOD_PREFIX, WORK_ID_MOOD_PREFIX,
+    ) + V3_MOOD_PREFIXES
+    for prefix in prefixes:
+        if value.startswith(prefix):
+            return True
+    return False
+
+
+def existing_relationship_metadata(container):
+    """Read the last valid v1 relationship values already stored by Plex."""
+    authors = []
+    series = []
+    indexes = {}
+    sequences = {}
+    language = ''
+    abridged = None
+    for item in container:
+        item = to_text(item).strip()
+        if not item:
+            continue
+        if item.startswith(SERIES_MOOD_PREFIX):
+            title = item[len(SERIES_MOOD_PREFIX):].strip()
+            key = normalize_text(title)
+            if title and key and key not in indexes:
+                indexes[key] = len(series)
+                series.append({'title': title, 'sequence': ''})
+            continue
+        if item.startswith(SEQUENCE_MOOD_PREFIX):
+            value = item[len(SEQUENCE_MOOD_PREFIX):].strip()
+            if ' #' in value:
+                title, sequence = value.rsplit(' #', 1)
+                key = normalize_text(title)
+                sequence = sequence_label(sequence)
+                if key and sequence and key not in sequences:
+                    sequences[key] = sequence
+            continue
+        if item.startswith(LANGUAGE_MOOD_PREFIX):
+            if not language:
+                language = item[len(LANGUAGE_MOOD_PREFIX):].strip()
+            continue
+        if item == EDITION_MOOD_PREFIX + 'Abridged':
+            abridged = True
+            continue
+        if item == EDITION_MOOD_PREFIX + 'Unabridged':
+            abridged = False
+            continue
+        if not reserved_mood(item) and item not in authors:
+            authors.append(item)
+    for entry in series:
+        key = normalize_text(entry.get('title'))
+        if key in sequences:
+            entry['sequence'] = sequences[key]
+    return {
+        'authors': authors,
+        'series': series,
+        'language': language,
+        'abridged': abridged,
+    }
+
+
+def preserve_relationship_fallbacks(
+    metadata, authors, series, language='', abridged=None, provider='provider'
+):
+    """Keep last-known-good v1 tags when a refresh response is partial."""
+    previous = existing_relationship_metadata(metadata.moods)
+    preserved = []
+    if not authors and previous['authors']:
+        authors = previous['authors']
+        preserved.append('authors')
+    if not series and previous['series']:
+        series = previous['series']
+        preserved.append('series')
+    if not language and previous['language']:
+        language = previous['language']
+        preserved.append('language')
+    if abridged is None and previous['abridged'] is not None:
+        abridged = previous['abridged']
+        preserved.append('edition')
+    if preserved:
+        log(
+            'INFO',
+            'Preserved last-known-good %s metadata because the current %s response omitted it',
+            ', '.join(preserved), provider,
+        )
+    return authors, series, language, abridged
+
+
 def embedded_series_entries(embedded):
     if not isinstance(embedded, dict) or not embedded.get('series'):
         return []
@@ -764,11 +873,11 @@ def sort_title_with_series_fallback(product, title, fallback_entries):
 
 
 def work_identity_enabled():
-    return as_bool(pref('store_work_identity_as_mood', True), True)
+    return as_bool(pref('store_work_identity_as_mood', False), False)
 
 
 def extended_player_metadata_enabled():
-    return as_bool(pref('store_extended_player_metadata', True), True)
+    return as_bool(pref('store_extended_player_metadata', False), False)
 
 
 def prune_disabled_contract_moods(container):
@@ -838,8 +947,49 @@ def existing_v3_enrichment_tags(container):
         if re.match(r'^Work-Published: [1-9][0-9]{0,3}$', item):
             values.append(item)
         elif re.match(
-            r'^Contributor-ID: author:openlibrary:OL[0-9]+A = .+$', item
+            r'^Contributor-ID: (?:author|narrator):(?:audible:[A-Z0-9]{10}|librivox:[1-9][0-9]{0,9}|openlibrary:OL[0-9]+A) = .+$',
+            item,
         ):
+            values.append(item)
+        elif item in (
+            'Production: Single narrator', 'Production: Multi-narrator',
+            'Production: Full cast', 'Production: Dramatized',
+            'Production: Community recording',
+        ):
+            values.append(item)
+        elif item == 'Rating-Source: Audible':
+            values.append(item)
+        elif re.match(r'^Rating-Count: [0-9]+$', item):
+            values.append(item)
+    return values
+
+
+def v3_tag_key(value):
+    value = to_text(value).strip()
+    if value.startswith(CONTRIBUTOR_ID_MOOD_PREFIX) and ' = ' in value:
+        return value.split(' = ', 1)[0].lower()
+    for prefix in (
+        WORK_PUBLISHED_MOOD_PREFIX, PRODUCTION_MOOD_PREFIX,
+        RATING_SOURCE_MOOD_PREFIX, RATING_COUNT_MOOD_PREFIX,
+    ):
+        if value.startswith(prefix):
+            return prefix.lower()
+    return value.lower()
+
+
+def merge_v3_tags(existing, current):
+    """Prefer current provider evidence, preserving valid omitted values."""
+    values = []
+    positions = {}
+    for item in list(existing or []) + list(current or []):
+        item = to_text(item).strip()
+        if not item:
+            continue
+        key = v3_tag_key(item)
+        if key in positions:
+            values[positions[key]] = item
+        else:
+            positions[key] = len(values)
             values.append(item)
     return values
 
@@ -908,17 +1058,17 @@ def relationship_moods(
             title = text_field(item.get('title'))
             if not title:
                 continue
-            moods.append('Series: ' + title)
+            moods.append(SERIES_MOOD_PREFIX + title)
             sequence = sequence_label(item.get('sequence'))
             if sequence:
-                moods.append('Sequence: %s #%s' % (title, sequence))
+                moods.append(SEQUENCE_MOOD_PREFIX + '%s #%s' % (title, sequence))
     visible_language = language_label(language)
     if visible_language:
-        moods.append('Language: ' + visible_language)
+        moods.append(LANGUAGE_MOOD_PREFIX + visible_language)
     if abridged is True:
-        moods.append('Edition: Abridged')
+        moods.append(EDITION_MOOD_PREFIX + 'Abridged')
     elif abridged is False:
-        moods.append('Edition: Unabridged')
+        moods.append(EDITION_MOOD_PREFIX + 'Unabridged')
     if work_identity_enabled():
         for identity in work_identities or []:
             identity = valid_work_identity(identity)
@@ -1412,19 +1562,6 @@ def append_local_search_result(
     append_search_result(results, local_id, local_name, lang, local_score)
     log('INFO', 'Using stable %s fallback identity %s', local_kind, local_id)
     return local_id
-
-
-def local_metadata_title(value):
-    """Recover the book title if Plex echoes our local search-result label."""
-    value = to_text(value).strip()
-    marker = ' — Local metadata'
-    if marker not in value:
-        return value
-    if value.startswith('"'):
-        closing_quote = value.find('"', 1)
-        if closing_quote > 1:
-            return value[1:closing_quote].strip()
-    return value.split(marker, 1)[0].strip('" ')
 
 
 def defer_provider_search(
@@ -2270,11 +2407,23 @@ class VocalisMetaAlbum(Agent.Album):
         )
         active_authors = provider_authors or local_authors
         active_narrators = provider_narrators or local_narrators
+        active_language = (
+            text_field(product.get('language')) or embedded.get('language')
+        )
+        active_abridged = product_abridged(product)
+        if active_abridged is None:
+            active_abridged = embedded.get('abridged')
+        active_authors, active_series, active_language, active_abridged = (
+            preserve_relationship_fallbacks(
+                metadata, active_authors, active_series, active_language,
+                active_abridged, 'Audible'
+            )
+        )
         set_value(metadata, 'title', title, force, True)
         set_value(
             metadata, 'title_sort',
             sort_title_with_series_fallback(
-                product, display_title(product, False), local_series
+                product, display_title(product, False), active_series
             ), force, True
         )
         set_value(
@@ -2301,15 +2450,14 @@ class VocalisMetaAlbum(Agent.Album):
         if active_narrators:
             replace_container(metadata.styles, active_narrators)
 
-        active_abridged = product_abridged(product)
-        if active_abridged is None:
-            active_abridged = embedded.get('abridged')
         previous_work_identities = existing_work_identities(metadata.moods)
-        player_tags = existing_v3_enrichment_tags(metadata.moods)
-        player_tags.extend(audible_v3_tags(product))
+        player_tags = merge_v3_tags(
+            existing_v3_enrichment_tags(metadata.moods),
+            audible_v3_tags(product),
+        )
         moods = relationship_moods(
             active_authors, active_series,
-            text_field(product.get('language')) or embedded.get('language'),
+            active_language,
             active_abridged, previous_work_identities, player_tags
         )
         replace_container(metadata.moods, moods)
@@ -2348,6 +2496,19 @@ class VocalisMetaAlbum(Agent.Album):
             embedded_series_entries(embedded)
             if embedded_series_enabled() else []
         )
+        book_authors = librivox_authors(book)
+        book_readers = librivox_readers(book)
+        if embedded_contributors_enabled():
+            book_authors = book_authors or embedded.get('authors') or []
+            book_readers = book_readers or embedded.get('narrators') or []
+        active_language = librivox_language(book) or embedded.get('language')
+        active_abridged = embedded.get('abridged')
+        book_authors, local_series, active_language, active_abridged = (
+            preserve_relationship_fallbacks(
+                metadata, book_authors, local_series, active_language,
+                active_abridged, 'LibriVox'
+            )
+        )
         set_value(metadata, 'title', title, force, True)
         set_value(
             metadata, 'title_sort',
@@ -2373,20 +2534,17 @@ class VocalisMetaAlbum(Agent.Album):
         book_genres = librivox_genres(book, 8)
         if book_genres and not as_bool(pref('keep_existing_genres', False)):
             replace_container(metadata.genres, book_genres)
-        book_authors = librivox_authors(book)
-        book_readers = librivox_readers(book)
-        if embedded_contributors_enabled():
-            book_authors = book_authors or embedded.get('authors') or []
-            book_readers = book_readers or embedded.get('narrators') or []
         if book_readers:
             replace_container(metadata.styles, book_readers)
         previous_work_identities = existing_work_identities(metadata.moods)
-        player_tags = existing_v3_enrichment_tags(metadata.moods)
-        player_tags.extend(librivox_v3_tags(book))
+        player_tags = merge_v3_tags(
+            existing_v3_enrichment_tags(metadata.moods),
+            librivox_v3_tags(book),
+        )
         moods = relationship_moods(
             book_authors, local_series,
-            librivox_language(book) or embedded.get('language'),
-            embedded.get('abridged'), previous_work_identities, player_tags
+            active_language, active_abridged,
+            previous_work_identities, player_tags
         )
         replace_container(metadata.moods, moods)
 
@@ -2412,7 +2570,6 @@ class VocalisMetaAlbum(Agent.Album):
             media_value(media, 'album') or media_value(media, 'title')
             or media_value(media, 'name') or metadata.title
         ).strip()
-        title = local_metadata_title(title)
         author = author_name_from_guid(media_parent_guid(media))
         if not author and embedded.get('authors'):
             author = '; '.join(embedded.get('authors'))
@@ -2436,6 +2593,15 @@ class VocalisMetaAlbum(Agent.Album):
             embedded_series_entries(embedded)
             if embedded_series_enabled() else []
         )
+        active_authors = embedded.get('authors') or ([author] if author else [])
+        active_language = embedded.get('language')
+        active_abridged = embedded.get('abridged')
+        active_authors, local_series, active_language, active_abridged = (
+            preserve_relationship_fallbacks(
+                metadata, active_authors, local_series, active_language,
+                active_abridged, 'embedded metadata'
+            )
+        )
         set_value(metadata, 'title', title, False)
         set_value(
             metadata, 'title_sort',
@@ -2449,8 +2615,7 @@ class VocalisMetaAlbum(Agent.Album):
         previous_work_identities = existing_work_identities(metadata.moods)
         player_tags = existing_v3_enrichment_tags(metadata.moods)
         moods = relationship_moods(
-            embedded.get('authors') or ([author] if author else []),
-            local_series, embedded.get('language'), embedded.get('abridged'),
+            active_authors, local_series, active_language, active_abridged,
             previous_work_identities, player_tags
         )
         if moods:

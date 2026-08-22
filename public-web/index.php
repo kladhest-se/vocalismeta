@@ -11,7 +11,8 @@ $project = [
     'name' => 'VocalisMeta',
     'version' => '0.1.0',
     'github_web' => 'https://github.com/kladhest-se/vocalismeta',
-    'installer' => 'https://raw.githubusercontent.com/kladhest-se/vocalismeta/main/scripts/install-on-plex.sh',
+    'github_git' => 'git@github.com:kladhest-se/vocalismeta.git',
+    'github_clone' => 'https://github.com/kladhest-se/vocalismeta.git',
     'player_web' => 'https://vocalisbook.kladhest.se',
 ];
 
@@ -151,23 +152,29 @@ function e(string $value): string
     <div class="install-copy">
       <p class="section-label">Direct installation</p>
       <h2>A clean, predictable Plex bundle.</h2>
-      <p>Run the public installer for the stable release or the latest developer build. It validates the bundle, restarts Plex, checks startup, and rolls back on failure.</p>
+      <p>Clone the public GitHub repository, copy <code>VocalisMeta.bundle</code> into Plex's plug-in directory, set Plex ownership, and restart the server.</p>
       <ul><li>Static development version <?= e($project['version']) ?></li><li>Runs entirely inside Plex</li><li>No companion service</li></ul>
     </div>
     <div class="terminal">
       <div class="terminal-top"><span></span><span></span><span></span><b>INSTALL</b></div>
-      <pre><code><span>$</span> curl -fsSL \
-  <?= e($project['installer']) ?> | \
-  sudo bash -s -- --release v<?= e($project['version']) ?>
+      <pre><code><span>$</span> git clone --depth 1 \
+  <?= e($project['github_clone']) ?> \
+  vocalismeta
 
-<span>$</span> curl -fsSL \
-  <?= e($project['installer']) ?> | \
-  sudo bash -s -- --developer</code></pre>
+<span>$</span> sudo rm -rf -- \
+  "/var/lib/plexmediaserver/Library/Application Support/\
+Plex Media Server/Plug-ins/VocalisMeta.bundle"
+
+<span>$</span> sudo cp -a vocalismeta/VocalisMeta.bundle \
+  "/var/lib/plexmediaserver/Library/Application Support/\
+Plex Media Server/Plug-ins/VocalisMeta.bundle"
+
+<span>$</span> sudo systemctl restart plexmediaserver</code></pre>
     </div>
     <div class="repository-card">
       <p class="section-label">Public source repository</p>
       <strong>GitHub</strong>
-      <code><?= e($project['github_web']) ?></code>
+      <code><?= e($project['github_git']) ?></code>
     </div>
   </section>
 
