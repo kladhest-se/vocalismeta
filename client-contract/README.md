@@ -9,7 +9,7 @@ not loaded by Plex and do not add control values to user-visible metadata.
   field, relationship namespace, progress, artwork, and chapter contracts.
 - `test-vectors-v1.json` contains identity and relationship examples that a
   compatible player parser must pass.
-- `metadata-contract-v2.json` is an additive, opt-in extension for an
+- `metadata-contract-v2.json` is an additive, configurable extension for an
   authoritative literary-work identity stored in a Plex Mood.
 - `test-vectors-v2.json` defines valid, missing, and malformed work-identity
   behavior.
@@ -23,15 +23,17 @@ recording identity or progress contract. A future incompatible interpretation
 must be introduced in a new versioned file instead of changing an existing
 version silently.
 
-Contract v2 is disabled by default in the agent. A compatible player must treat
-`Work-ID: openlibrary:<work-id>` as a reserved Mood, exclude it from the author
-index, and use it only to group editions or recordings. Playback progress,
-bookmarks, and completion remain owned by the Contract v1 recording identity.
+Contract v2 is enabled by default and can be disabled in the agent. A compatible
+player must treat `Work-ID: openlibrary:<work-id>` as a reserved Mood, exclude it
+from the author index, and use it only to group editions or recordings. Playback
+progress, bookmarks, and completion remain owned by the Contract v1 recording
+identity.
 
-Contract v3 is also disabled by default. Its five additional Mood prefixes are
-reserved when enabled and must not enter the author index. Values are emitted
-only from explicit provider data: no person identifier, production type, or
-publication year is manufactured from a name, cast size, title, or filename.
+Contract v3 is also enabled by default and can be disabled. Its five additional
+Mood prefixes are reserved when enabled and must not enter the author index.
+Values are emitted only from explicit provider data: no person identifier,
+production type, or publication year is manufactured from a name, cast size,
+title, or filename.
 The data is stored in Plex, so a compatible player still needs access only to
 Plex.
 

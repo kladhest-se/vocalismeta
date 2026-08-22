@@ -21,11 +21,15 @@
 - Matched-parent author recovery when track Artist tags contain the narrator.
 - Stable VocalisMeta artist identities for unresolved compound author credits.
 - Stable Audible, LibriVox, ISBN, and local-fingerprint client identities.
+- Clean local-fallback titles for Open Library and Google Books enrichment.
 - Authoritative matched-source refreshes that replace stale provider metadata.
 - ASIN-backed parent-author recovery and short-lived Audible search caching.
 - Author recovery from alternate Plex parent fields, embedded tags, and
   validated `Author/Book/file` directory layouts when track Artist is a narrator.
 - Edition matching using runtime, narrator, language, year, and abridgment hints.
+- Presentation-aware matching that prevents ordinary audiobooks from
+  automatically matching radio dramatisations, dramatized adaptations, or
+  explicitly full-cast editions.
 - Plex-tree duration recovery and strong rejection of severe runtime mismatches.
 - Detailed Fix Match edition labels and normalized multi-series ordering.
 - Catalog schema validation and equivalent ISBN-10/ISBN-13 enrichment lookups.
@@ -33,10 +37,11 @@
 - Parseable series sequence, language, and abridged-edition Mood namespaces.
 - Documented Client Identity Contract v1 and player-integration guide.
 - Machine-readable Client Identity Contract v1 with shared compatibility test vectors.
-- Optional Open Library work identity with additive Client Contract v2 and
-  shared player test vectors.
-- Optional provider-backed contributor IDs, first-publication year, explicit
-  production type, and rating provenance with Client Contract v3 vectors.
+- Default-on Open Library work identity with configurable Client Contract v2
+  and shared player test vectors.
+- Default-on provider-backed contributor IDs, first-publication year, explicit
+  production type, and rating provenance with configurable Contract v3 vectors.
+- Public release and developer installers with startup validation and rollback.
 - Safe cleanup of disabled Contract v2 and v3 Mood namespaces on refresh.
 - Work and Open Library contributor relationship revalidation after rematches.
 - Google Books missing-field enrichment using exact ISBN or title and author.

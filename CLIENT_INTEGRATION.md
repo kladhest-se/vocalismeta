@@ -67,7 +67,7 @@ Use the music hierarchy as follows:
 Do not interpret a raw Mood as an author before checking every reserved prefix:
 `Series: `, `Sequence: `, `Language: `, `Edition: `, `Work-ID: `,
 `Contributor-ID: `, `Work-Published: `, `Production: `, `Rating-Source: `, and
-`Rating-Count: `. Contract v2 and v3 prefixes appear only when their opt-in
+`Rating-Count: `. Contract v2 and v3 prefixes appear only when their configurable
 preferences are enabled.
 
 ## Durable identity
@@ -297,24 +297,26 @@ must not merge playback state: two recordings can have different duration,
 chapter layout, abridgment, and narration. Treat a missing or invalid Work-ID
 as unknown and do not manufacture one from title and author.
 
-Contract v2 is opt-in and disabled by default. Enabling it can cause a cached
-Open Library lookup during a Plex metadata refresh for an album that lacks the
-tag. The resulting value is stored in Plex; the player still communicates only
-with Plex and never needs Open Library access or a companion service.
+Contract v2 is enabled by default and can be disabled in the agent. When
+enabled, it can cause a cached Open Library lookup during a Plex metadata
+refresh for an album that lacks the tag. The resulting value is stored in Plex;
+the player still communicates only with Plex and never needs Open Library access
+or a companion service.
 
 ### Contract v3 extended player metadata
 
 Contract v3 adds provider-backed metadata that is useful to an audiobook
-player but has no dedicated legacy Plex music field. It is disabled by default.
+player but has no dedicated legacy Plex music field. It is enabled by default
+and can be disabled in the agent.
 
-Contracts v2 and v3 are opt-in. Existing albums do not gain these fields until
-the corresponding agent preference is enabled and Plex refreshes their
-metadata. Work identity, Open Library contributor IDs, and first-publication
-year require a confident Open Library match. Audible and LibriVox contributor
-IDs require an authoritative person identifier in the provider response;
-plain narrator Style names are the expected fallback. Production requires an
-explicit provider label, and rating source/count require usable provider
-rating data. Treat every missing optional field as unknown.
+Contracts v2 and v3 are enabled by default but remain configurable. Existing
+albums do not gain these fields until Plex refreshes their metadata. Work
+identity, Open Library contributor IDs, and first-publication year require a
+confident Open Library match. Audible and LibriVox contributor IDs require an
+authoritative person identifier in the provider response; plain narrator Style
+names are the expected fallback. Production requires an explicit provider
+label, and rating source/count require usable provider rating data. Treat every
+missing optional field as unknown.
 
 Contributor identities use:
 
