@@ -114,7 +114,7 @@ from client_metadata_core import (
 )
 
 AGENT_NAME = 'VocalisMeta Agent'
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 SERIES_MOOD_PREFIX = 'Series: '
 SEQUENCE_MOOD_PREFIX = 'Sequence: '
 LANGUAGE_MOOD_PREFIX = 'Language: '

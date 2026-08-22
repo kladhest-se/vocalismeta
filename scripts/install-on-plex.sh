@@ -129,13 +129,14 @@ if [[ "$mode" == 'release' ]]; then
     echo "Downloaded revision is not exact tag $release_version" >&2
     exit 1
   }
-  source_label="$release_version"
+  install_channel="stable ($release_version)"
 else
   echo 'Downloading the latest VocalisMeta developer build from main'
   git clone --quiet --depth 1 --single-branch --branch main \
     "$repository" "$clone_dir"
-  source_label="main@$(git -C "$clone_dir" rev-parse --short HEAD)"
+  install_channel='development (main)'
 fi
+source_revision="$(git -C "$clone_dir" rev-parse --short HEAD)"
 
 [[ -f "$bundle_source/Contents/Info.plist" ]] || {
   echo 'Downloaded repository has no VocalisMeta bundle.' >&2
@@ -145,6 +146,19 @@ fi
   echo 'Downloaded repository has no VocalisMeta agent entry point.' >&2
   exit 1
 }
+
+bundle_version="$(python3 - "$bundle_source/Contents/Info.plist" <<'PY'
+import plistlib
+import sys
+
+with open(sys.argv[1], 'rb') as handle:
+    info = plistlib.load(handle)
+version = info.get('CFBundleShortVersionString') or info.get('CFBundleVersion')
+if not isinstance(version, str) or not version.strip():
+    raise SystemExit('VocalisMeta bundle has no valid version.')
+print(version.strip())
+PY
+)"
 
 echo 'Running installer-owned Plex compatibility checks'
 python3 - "$bundle_source/Contents/Code" <<'PY'
@@ -277,7 +291,9 @@ if [[ "$startup_seen" != true ]]; then
 fi
 
 rollback_needed=false
-echo "VocalisMeta $source_label installed successfully."
+echo "VocalisMeta $bundle_version installed successfully."
+echo "Install channel: $install_channel"
+echo "Source revision: $source_revision"
 echo 'Plex is active and no fatal VocalisMeta startup errors were detected.'
 if grep -q 'resourceHashes' "$startup_log"; then
   echo "Ignored Plex's known non-fatal resourceHashes 404 during validation."
