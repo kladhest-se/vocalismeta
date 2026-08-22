@@ -45,6 +45,8 @@
 - Safe cleanup of disabled Contract v2 and v3 Mood namespaces on refresh.
 - Work and Open Library contributor relationship revalidation after rematches.
 - Google Books missing-field enrichment using exact ISBN or title and author.
+- Google Books API-key headers that keep credentials out of Plex URL logs, plus
+  a short cooldown after repeated quota or service failures.
 - Configurable Open Library/Google Books priority and enrichment request budget.
 - Short-lived book-provider search caching with safe uncached malformed-response
   retries.

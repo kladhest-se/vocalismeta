@@ -131,6 +131,7 @@ MAX_FALLBACK_REGIONS = 4
 AUDIBLE_SEARCH_CACHE_SECONDS = 300
 LIBRIVOX_SEARCH_CACHE_SECONDS = 300
 BOOK_SEARCH_CACHE_SECONDS = 300
+GOOGLEBOOKS_COOLDOWN_SECONDS = 300
 UNKNOWN_VALUES = ('', '[Unknown Album]', '[Unknown Artist]', 'Unknown Artist')
 API_KEY_RE = re.compile(r'([?&]key=)[^&]+', re.I)
 
@@ -142,6 +143,10 @@ CONFIG_STATE = {
     'values': {},
     'has_good': False,
     'reported_error': None,
+}
+
+GOOGLEBOOKS_STATE = {
+    'blocked_until': None,
 }
 
 
@@ -379,7 +384,7 @@ def set_request_status(request_status, ok, reason, status, attempts):
     request_status['attempts'] = attempts
 
 
-def request_json(url, cache_time=CACHE_1DAY, request_status=None):
+def request_json(url, cache_time=CACHE_1DAY, request_status=None, headers=None):
     last_error = None
     last_reason = 'provider_unavailable'
     last_status = None
@@ -393,13 +398,20 @@ def request_json(url, cache_time=CACHE_1DAY, request_status=None):
     except (TypeError, ValueError):
         timeout = 45
     effective_cache_time = cache_time
+    request_headers = headers if isinstance(headers, dict) else {}
     for attempt in range(1, attempts + 1):
         last_attempt = attempt
         try:
-            response = HTTP.Request(
-                url, timeout=timeout, cacheTime=effective_cache_time,
-                immediate=True
-            )
+            if request_headers:
+                response = HTTP.Request(
+                    url, timeout=timeout, cacheTime=effective_cache_time,
+                    immediate=True, headers=request_headers
+                )
+            else:
+                response = HTTP.Request(
+                    url, timeout=timeout, cacheTime=effective_cache_time,
+                    immediate=True
+                )
             try:
                 body = response.content
             except AttributeError:
@@ -1002,6 +1014,40 @@ def googlebooks_enabled():
     )
 
 
+def googlebooks_cooldown_active():
+    blocked_until = GOOGLEBOOKS_STATE.get('blocked_until')
+    if blocked_until is None:
+        return False
+    if datetime.datetime.now() >= blocked_until:
+        GOOGLEBOOKS_STATE['blocked_until'] = None
+        return False
+    return True
+
+
+def googlebooks_request(url, cache_time):
+    request_status = {}
+    response = request_json(
+        url, cache_time, request_status,
+        {'X-Goog-Api-Key': googlebooks_api_key()}
+    )
+    if request_status.get('ok'):
+        GOOGLEBOOKS_STATE['blocked_until'] = None
+        return response
+    status = request_status.get('status')
+    if status in (429, 500, 502, 503, 504):
+        GOOGLEBOOKS_STATE['blocked_until'] = (
+            datetime.datetime.now()
+            + datetime.timedelta(seconds=GOOGLEBOOKS_COOLDOWN_SECONDS)
+        )
+        log(
+            'WARN',
+            'Pausing optional Google Books enrichment for %d seconds '
+            'after HTTP %s',
+            GOOGLEBOOKS_COOLDOWN_SECONDS, status
+        )
+    return response
+
+
 def librivox_enabled():
     return as_bool(pref('librivox_enabled', False), False)
 
@@ -1288,16 +1334,22 @@ def fetch_googlebooks_isbn(isbn, budget=None):
     url = googlebooks_isbn_url(isbn, googlebooks_api_key(), 10)
     if not url or not googlebooks_enabled():
         return []
+    if googlebooks_cooldown_active():
+        return []
     if not use_enrichment_request(budget, 'Google Books'):
         return []
     log('DEBUG', 'Google Books ISBN enrichment request: %s', isbn)
-    return googlebooks_volumes(request_json(url, BOOK_SEARCH_CACHE_SECONDS))
+    return googlebooks_volumes(
+        googlebooks_request(url, BOOK_SEARCH_CACHE_SECONDS)
+    )
 
 
 def fetch_googlebooks_volumes(
     title, author='', language='', limit=10, budget=None
 ):
     if not googlebooks_enabled():
+        return []
+    if googlebooks_cooldown_active():
         return []
     url = googlebooks_search_url(
         title, author, googlebooks_api_key(), language, limit
@@ -1307,7 +1359,9 @@ def fetch_googlebooks_volumes(
     if not use_enrichment_request(budget, 'Google Books'):
         return []
     log('DEBUG', 'Google Books title enrichment request: %s', title)
-    return googlebooks_volumes(request_json(url, BOOK_SEARCH_CACHE_SECONDS))
+    return googlebooks_volumes(
+        googlebooks_request(url, BOOK_SEARCH_CACHE_SECONDS)
+    )
 
 
 def fetch_librivox_book(book_id, provider_status=None):
