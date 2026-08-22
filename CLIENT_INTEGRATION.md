@@ -67,7 +67,7 @@ Use the music hierarchy as follows:
 Do not interpret a raw Mood as an author before checking every reserved prefix:
 `Series: `, `Sequence: `, `Language: `, `Edition: `, `Work-ID: `,
 `Contributor-ID: `, `Work-Published: `, `Production: `, `Rating-Source: `, and
-`Rating-Count: `. Contract v2 and v3 prefixes appear only when their configurable
+`Rating-Count: `. Contract v2 and v3 prefixes appear only when their opt-in
 preferences are enabled.
 
 ## Durable identity
@@ -236,6 +236,20 @@ One book may belong to multiple series. Keep every `Series:` and `Sequence:`
 relationship. The first provider series controls `title_sort`, but the client
 should build its own series ordering from matching sequence tags.
 
+Series names are exact provider relationships, not fuzzy aliases. `Dune` and
+`The Dune Sequence`, for example, stay separate unless authoritative source
+data says otherwise. A compact UI may present the first relationship as the
+primary series, but it should retain the remaining memberships rather than
+silently merging them.
+
+On a partial provider refresh, VocalisMeta preserves the last-known-good
+author, series, sequence, language, edition, and valid Contract v3 values when
+the current response omits that entire namespace. Non-empty fresh values
+replace the old namespace. Clients should invalidate their cached projection
+when Plex changes the item's metadata timestamp and then trust the new Plex
+detail response; the agent-side preservation rule prevents incidental omission
+from erasing a previously valid relationship.
+
 VocalisMeta does not know a trustworthy series total. A client can calculate
 “book 5 of 9 in this Plex library” from currently indexed members, but should
 label that as library coverage rather than a publisher-defined total.
@@ -283,17 +297,24 @@ must not merge playback state: two recordings can have different duration,
 chapter layout, abridgment, and narration. Treat a missing or invalid Work-ID
 as unknown and do not manufacture one from title and author.
 
-Contract v2 is enabled by default and can be disabled in the agent. When
-enabled, it can cause a cached Open Library lookup during a Plex metadata
-refresh for an album that lacks the tag. The resulting value is stored in Plex;
-the player still communicates only with Plex and never needs Open Library access
-or a companion service.
+Contract v2 is opt-in and disabled by default. Enabling it can cause a cached
+Open Library lookup during a Plex metadata refresh for an album that lacks the
+tag. The resulting value is stored in Plex; the player still communicates only
+with Plex and never needs Open Library access or a companion service.
 
 ### Contract v3 extended player metadata
 
 Contract v3 adds provider-backed metadata that is useful to an audiobook
-player but has no dedicated legacy Plex music field. It is enabled by default
-and can be disabled in the agent.
+player but has no dedicated legacy Plex music field. It is disabled by default.
+
+Contracts v2 and v3 are opt-in. Existing albums do not gain these fields until
+the corresponding agent preference is enabled and Plex refreshes their
+metadata. Work identity, Open Library contributor IDs, and first-publication
+year require a confident Open Library match. Audible and LibriVox contributor
+IDs require an authoritative person identifier in the provider response;
+plain narrator Style names are the expected fallback. Production requires an
+explicit provider label, and rating source/count require usable provider
+rating data. Treat every missing optional field as unknown.
 
 Contributor identities use:
 

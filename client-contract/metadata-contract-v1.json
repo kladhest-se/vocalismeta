@@ -136,7 +136,20 @@
     "unreserved_mood": "additional_author",
     "sequence_position_type": "string_with_optional_numeric_value",
     "series_total": "not_authoritative",
-    "collection_policy": "leave_untouched"
+    "collection_policy": "leave_untouched",
+    "series_name_policy": "exact_provider_relationship_no_fuzzy_alias_merge",
+    "primary_series": "first_provider_relationship",
+    "refresh_stability": {
+      "partial_response_policy": "preserve_last_known_good_namespace",
+      "fresh_nonempty_namespace_replaces_previous": true,
+      "applies_to": [
+        "additional_author",
+        "series_membership",
+        "series_position",
+        "recording_language",
+        "recording_abridgment"
+      ]
+    }
   },
   "progress": {
     "owner": "album_recording_identity",

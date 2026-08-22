@@ -40,6 +40,7 @@ def volumes_url(query, api_key, language='', limit=10):
         limit = 10
     params = {
         'q': query,
+        'key': api_key,
         'maxResults': limit,
         'printType': 'books',
         'projection': 'full',

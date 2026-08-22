@@ -2,13 +2,13 @@
   "contract": "VocalisMeta Extended Player Metadata Contract",
   "contract_version": 3,
   "status": "stable",
-  "compatibility": "additive_configurable",
+  "compatibility": "additive_opt_in",
   "extends": "metadata-contract-v2.json",
   "bundle_version": "0.1.0",
   "plex": {
     "storage_field": "Mood",
     "preference": "store_extended_player_metadata",
-    "default_enabled": true,
+    "default_enabled": false,
     "player_provider_access_required": false
   },
   "reserved_mood_namespaces": [
