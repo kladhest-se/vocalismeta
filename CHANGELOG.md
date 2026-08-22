@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.1 - Unreleased
+
+### Added
+
+- Last-known-good author, series, sequence, language, edition, and valid
+  Contract v3 metadata preservation when a provider refresh omits an existing
+  relationship namespace.
+- Traceable `series_tags` and `sequence_tags` counts in structured metadata
+  refresh summaries.
+- Exact multi-series client semantics that designate the first provider
+  relationship as primary without unsafe fuzzy alias merging.
+
 ## 0.1.0 - 2026-08-15
 
 ### Added
@@ -58,8 +70,6 @@
   candidate counts, and stable outcome reasons.
 - One-line structured metadata-refresh summaries for successful and early-exit
   update paths.
-- Last-known-good relationship preservation for partial provider refreshes,
-  with traceable Series and Sequence counts in update summaries.
 - Provider-failure classification that defers local fallback after network,
   HTTP, malformed-response, or partial regional catalog failures.
 - Optional strict JSON configuration with safe reloads and secret-file support.
