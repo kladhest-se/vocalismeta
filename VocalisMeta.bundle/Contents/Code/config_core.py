@@ -204,7 +204,7 @@ def load_config_file(path):
 
     if 'providers' in document:
         providers = require_object(document['providers'], 'providers', (
-            'librivox', 'open_library', 'google_books',
+            'librivox', 'ljudboksarkivet', 'open_library', 'google_books',
             'enrichment_priority', 'request_budget',
         ))
         if 'librivox' in providers:
@@ -220,6 +220,21 @@ def load_config_file(path):
                 values['librivox_mode'] = require_choice(
                     librivox['mode'], 'providers.librivox.mode',
                     ('hinted_only', 'fallback', 'preferred')
+                )
+        if 'ljudboksarkivet' in providers:
+            provider = require_object(
+                providers['ljudboksarkivet'],
+                'providers.ljudboksarkivet', ('enabled', 'mode')
+            )
+            if 'enabled' in provider:
+                values['ljudboksarkivet_enabled'] = require_boolean(
+                    provider['enabled'],
+                    'providers.ljudboksarkivet.enabled'
+                )
+            if 'mode' in provider:
+                values['ljudboksarkivet_mode'] = require_choice(
+                    provider['mode'], 'providers.ljudboksarkivet.mode',
+                    ('fallback', 'preferred')
                 )
         if 'open_library' in providers:
             provider = require_object(

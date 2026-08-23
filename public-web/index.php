@@ -17,12 +17,13 @@ $project = [
 
 $features = [
     ['Regional matching', 'Searches multiple Audible marketplaces and scores the correct audiobook edition, narrator, runtime, and format.'],
+    ['Swedish catalogue', 'Optionally matches Swedish audiobooks through Ljudboksarkivet and stores the result directly in Plex.'],
     ['Thoughtful enrichment', 'Uses Open Library and Google Books only to fill gaps without replacing stronger recording metadata.'],
     ['Artwork that holds up', 'Reads local and embedded covers, validates remote images, retries downloads, and removes stale posters.'],
     ['Built for real libraries', 'Understands multi-part books, embedded ASIN, region, ISBN, LibriVox IDs, series, and sequence tags.'],
 ];
 
-$sources = ['Audible', 'Open Library', 'Google Books', 'LibriVox', 'Embedded tags'];
+$sources = ['Audible', 'Ljudboksarkivet', 'Open Library', 'Google Books', 'LibriVox', 'Embedded tags'];
 $flow = ['Audio files', 'VocalisMeta', 'Plex library', 'Audiobook player'];
 
 function e(string $value): string

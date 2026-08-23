@@ -37,6 +37,7 @@ LANGUAGE_NAMES = {
     'fr': 'french', 'fra': 'french', 'fre': 'french',
     'it': 'italian', 'ita': 'italian',
     'ja': 'japanese', 'jpn': 'japanese',
+    'sv': 'swedish', 'swe': 'swedish',
 }
 
 RESPONSE_GROUPS = ','.join([
@@ -566,6 +567,7 @@ def language_label(value):
         'eng': 'English', 'deu': 'German', 'ger': 'German',
         'spa': 'Spanish', 'fra': 'French', 'fre': 'French',
         'ita': 'Italian', 'jpn': 'Japanese',
+        'swe': 'Swedish',
     }
     if normalized in LANGUAGE_NAMES:
         return LANGUAGE_NAMES[normalized].capitalize()
@@ -683,7 +685,12 @@ def score_product(wanted_title, wanted_author, wanted_language, product, rank=0,
         score = (title_score * 84.0) + (author_score * 14.0)
     else:
         score = title_score * 98.0
-    expected_language = LANGUAGE_NAMES.get(to_text(wanted_language).lower(), normalize_text(wanted_language))
+    wanted_language_code = (
+        to_text(wanted_language).lower().replace('_', '-').split('-', 1)[0]
+    )
+    expected_language = LANGUAGE_NAMES.get(
+        wanted_language_code, normalize_text(wanted_language)
+    )
     actual_language = normalize_text(product.get('language'))
     if expected_language and actual_language and expected_language == actual_language:
         score += 2.0

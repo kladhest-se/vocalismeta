@@ -23,6 +23,7 @@ ISBN_RE = re.compile(r'^(?:\d{9}[\dX]|\d{13})$')
 LANGUAGE_NAMES = {
     'eng': 'english', 'deu': 'german', 'ger': 'german', 'spa': 'spanish',
     'fra': 'french', 'fre': 'french', 'ita': 'italian', 'jpn': 'japanese',
+    'swe': 'swedish', 'sv': 'swedish',
 }
 
 

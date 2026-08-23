@@ -19,6 +19,13 @@
   Plex networking logs no longer expose API keys in request URLs.
 - Clean local-fallback album titles when Plex persists VocalisMeta's descriptive
   Fix Match label, while preserving genuine custom titles.
+- Optional Ljudboksarkivet recording matching for Swedish audiobooks, using the
+  site's public sitemaps and structured `Audiobook` page data without calling
+  its disallowed search endpoint.
+- Ljudboksarkivet ISBN identities, Swedish titles, authors, narrators,
+  publishers, release dates, summaries, genres, series/sequence relationships,
+  ratings, and cover artwork stored directly in Plex.
+- Swedish language aliases across recording and enrichment matching.
 
 ## 0.1.0 - 2026-08-15
 

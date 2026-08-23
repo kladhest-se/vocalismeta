@@ -75,6 +75,25 @@
       }
     },
     {
+      "name": "ljudboksarkivet_rating_provenance",
+      "moods": [
+        "Selma Lagerlöf",
+        "Language: Swedish",
+        "Rating-Source: Ljudboksarkivet",
+        "Rating-Count: 418"
+      ],
+      "expected": {
+        "additional_authors": [
+          "Selma Lagerlöf"
+        ],
+        "contributors": [],
+        "work_published": null,
+        "production": null,
+        "rating_source": "Ljudboksarkivet",
+        "rating_count": 418
+      }
+    },
+    {
       "name": "malformed_reserved_values_are_ignored_not_authors",
       "moods": [
         "Andy Weir",
