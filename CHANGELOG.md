@@ -17,6 +17,8 @@
   version, install channel, and exact source revision.
 - Google Books authentication through the `X-Goog-Api-Key` request header so
   Plex networking logs no longer expose API keys in request URLs.
+- Clean local-fallback album titles when Plex persists VocalisMeta's descriptive
+  Fix Match label, while preserving genuine custom titles.
 
 ## 0.1.0 - 2026-08-15
 
