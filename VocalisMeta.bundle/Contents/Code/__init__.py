@@ -1588,6 +1588,11 @@ def local_metadata_title(value):
     return value.split(marker, 1)[0].strip('" ')
 
 
+def is_local_metadata_search_label(value):
+    """Return True only for a presentation label created by this agent."""
+    return ' — Local metadata' in to_text(value).strip()
+
+
 def defer_provider_search(
     title, author, author_source, manual, provider_states,
     candidate_count=0, catalog_hits=0, audible_queries=0, score=None
@@ -2627,10 +2632,18 @@ class VocalisMetaAlbum(Agent.Album):
                 active_abridged, 'embedded metadata'
             )
         )
-        set_value(metadata, 'title', title, False)
+        # Plex can persist the selected MetadataSearchResult.name as the album
+        # title before calling update().  Local results intentionally include
+        # author and source context for the Fix Match screen, but that label is
+        # not album metadata.  Replace only labels owned by VocalisMeta; retain
+        # every other existing title so user-entered values remain untouched.
+        replace_local_title = is_local_metadata_search_label(previous_title)
+        set_value(metadata, 'title', title, False, replace_local_title)
+        previous_title_sort = to_text(metadata.title_sort).strip()
         set_value(
             metadata, 'title_sort',
-            sort_title_with_series_fallback({}, title, local_series), False
+            sort_title_with_series_fallback({}, title, local_series), False,
+            is_local_metadata_search_label(previous_title_sort)
         )
         local_narrators = (
             embedded.get('narrators') if embedded_contributors_enabled() else []
