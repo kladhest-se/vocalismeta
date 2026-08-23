@@ -120,6 +120,20 @@ def contributor_tags(records, role, source, id_key):
     return output
 
 
+def name_contributor_tags(names, role='narrator'):
+    """Return deterministic fallback tags for contributors without source IDs."""
+    output = []
+    seen = set()
+    for value in names if isinstance(names, list) else []:
+        name = clean_name(value)
+        tag = contributor_tag(role, 'name', name_fingerprint(name), name)
+        key = tag.lower()
+        if tag and key not in seen:
+            seen.add(key)
+            output.append(tag)
+    return output
+
+
 def audible_contributor_tags(product):
     if not isinstance(product, dict):
         return []
@@ -136,9 +150,8 @@ def audible_contributor_tags(product):
         name = person_name(record)
         if valid_contributor_id('audible', record.get('asin')) or not name:
             continue
-        tag = contributor_tag(
-            'narrator', 'name', name_fingerprint(name), name
-        )
+        tag = name_contributor_tags([name])
+        tag = tag[0] if tag else ''
         if tag and tag.lower() not in [value.lower() for value in output]:
             output.append(tag)
     return output

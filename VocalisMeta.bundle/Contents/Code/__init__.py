@@ -118,6 +118,7 @@ from identity_core import book_identity, split_book_identity
 from client_metadata_core import (
     audible_contributor_tags,
     librivox_contributor_tags,
+    name_contributor_tags,
     openlibrary_contributor_tags,
     production_type as client_production_type,
     rating_count as client_rating_count,
@@ -1091,6 +1092,25 @@ def replace_openlibrary_v3_metadata(container, document):
     replace_container(container, values)
 
 
+def openlibrary_work_year_is_plausible(metadata, document):
+    """Reject work dates that occur after the known recording release."""
+    work_year = openlibrary_year(document)
+    recording_year = None
+    try:
+        recording_year = metadata.originally_available_at.year
+    except (AttributeError, TypeError):
+        pass
+    if work_year and recording_year and work_year > recording_year:
+        log(
+            'WARN',
+            'Rejected Open Library work metadata with first-publication year '
+            '%s after recording release year %s',
+            work_year, recording_year
+        )
+        return False
+    return True
+
+
 def audible_v3_tags(product):
     if not extended_player_metadata_enabled():
         return []
@@ -1117,7 +1137,9 @@ def librivox_v3_tags(book):
 def ljudboksarkivet_v3_tags(book):
     if not extended_player_metadata_enabled():
         return []
-    values = []
+    values = name_contributor_tags(
+        list(book.get('narrators') or []), 'narrator'
+    )
     if book.get('rating') is not None:
         values.append(RATING_SOURCE_MOOD_PREFIX + 'Ljudboksarkivet')
         if book.get('rating_count') is not None:
@@ -1920,11 +1942,19 @@ def apply_openlibrary_enrichment(
     )
     if not document:
         return False
-    if work_identity_enabled():
+    work_relationship_valid = openlibrary_work_year_is_plausible(
+        metadata, document
+    )
+    if not work_relationship_valid:
+        if work_identity_enabled():
+            replace_work_identity(metadata.moods, '')
+        replace_openlibrary_v3_metadata(metadata.moods, {})
+    elif work_identity_enabled():
         identity = openlibrary_work_identity(document)
         if identity:
             replace_work_identity(metadata.moods, identity)
-    replace_openlibrary_v3_metadata(metadata.moods, document)
+    if work_relationship_valid:
+        replace_openlibrary_v3_metadata(metadata.moods, document)
     if not metadata.summary:
         work = fetch_openlibrary_work(document, budget)
         description = (
