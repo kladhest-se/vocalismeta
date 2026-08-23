@@ -15,7 +15,7 @@ AUDIBLE_ID_RE = re.compile(r'^[A-Z0-9]{10}$')
 OPENLIBRARY_AUTHOR_RE = re.compile(r'^OL[0-9]+A$')
 DECIMAL_ID_RE = re.compile(r'^[1-9][0-9]{0,9}$')
 ALLOWED_ROLES = ('author', 'narrator')
-ALLOWED_SOURCES = ('audible', 'librivox', 'openlibrary')
+ALLOWED_SOURCES = ('audible', 'librivox', 'openlibrary', 'name')
 
 
 def to_text(value):
@@ -44,6 +44,19 @@ def clean_name(value):
     return value.replace(' = ', ' - ')
 
 
+def name_fingerprint(value):
+    """Return a deterministic fallback ID for an exact normalized name."""
+    value = clean_name(value).lower()
+    if not value:
+        return ''
+    checksum = 14695981039346656037
+    modulus = 18446744073709551616
+    for index in range(len(value)):
+        checksum = checksum ^ ord(value[index])
+        checksum = (checksum * 1099511628211) % modulus
+    return '%016x' % checksum
+
+
 def person_name(record):
     if not isinstance(record, dict):
         return ''
@@ -69,6 +82,9 @@ def valid_contributor_id(source, value):
     if source == 'openlibrary':
         value = value.rsplit('/', 1)[-1].upper()
         return value if OPENLIBRARY_AUTHOR_RE.match(value) else ''
+    if source == 'name':
+        value = value.lower()
+        return value if re.match(r'^[0-9a-f]{16}$', value) else ''
     return ''
 
 
@@ -76,6 +92,8 @@ def contributor_tag(role, source, identifier, name):
     role = text_field(role).lower()
     source = text_field(source).lower()
     if role not in ALLOWED_ROLES or source not in ALLOWED_SOURCES:
+        return ''
+    if source == 'name' and role != 'narrator':
         return ''
     identifier = valid_contributor_id(source, identifier)
     name = clean_name(name)
@@ -108,9 +126,21 @@ def audible_contributor_tags(product):
     output = contributor_tags(
         product.get('authors'), 'author', 'audible', 'asin'
     )
+    narrators = product.get('narrators')
     output.extend(contributor_tags(
-        product.get('narrators'), 'narrator', 'audible', 'asin'
+        narrators, 'narrator', 'audible', 'asin'
     ))
+    for record in narrators if isinstance(narrators, list) else []:
+        if not isinstance(record, dict):
+            continue
+        name = person_name(record)
+        if valid_contributor_id('audible', record.get('asin')) or not name:
+            continue
+        tag = contributor_tag(
+            'narrator', 'name', name_fingerprint(name), name
+        )
+        if tag and tag.lower() not in [value.lower() for value in output]:
+            output.append(tag)
     return output
 
 

@@ -23,7 +23,8 @@
       "source_identifier_regex": {
         "audible": "^[A-Z0-9]{10}$",
         "librivox": "^[1-9][0-9]{0,9}$",
-        "openlibrary": "^OL[0-9]+A$"
+        "openlibrary": "^OL[0-9]+A$",
+        "name": "^[0-9a-f]{16}$"
       },
       "multiple": true
     },
@@ -71,7 +72,8 @@
   "rules": [
     "all_v3_prefixes_are_reserved_and_must_not_be_indexed_as_authors",
     "contributor_display_name_is_not_a_stable_identity",
-    "contributor_identifier_is_authoritative_only_with_a_valid_source_id",
+    "provider_contributor_identifier_is_authoritative_only_with_a_valid_source_id",
+    "name_contributor_identifier_is_a_deterministic_narrator_fallback_not_an_authoritative_person_id",
     "missing_metadata_means_unknown",
     "production_type_must_not_be_inferred_from_narrator_count",
     "rating_count_is_meaningful_only_with_rating_source",

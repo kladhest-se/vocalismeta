@@ -1013,7 +1013,7 @@ def existing_v3_enrichment_tags(container):
         if re.match(r'^Work-Published: [1-9][0-9]{0,3}$', item):
             values.append(item)
         elif re.match(
-            r'^Contributor-ID: (?:author|narrator):(?:audible:[A-Z0-9]{10}|librivox:[1-9][0-9]{0,9}|openlibrary:OL[0-9]+A) = .+$',
+            r'^Contributor-ID: (?:(?:author|narrator):(?:audible:[A-Z0-9]{10}|librivox:[1-9][0-9]{0,9}|openlibrary:OL[0-9]+A)|narrator:name:[0-9a-f]{16}) = .+$',
             item,
         ):
             values.append(item)
