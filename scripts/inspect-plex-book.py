@@ -168,16 +168,32 @@ def album_library(album):
     return album.attrib.get('librarySectionTitle') or ''
 
 
+def has_subtitle_prefix(actual, wanted):
+    """Return true when wanted is the title before an edition/subtitle suffix."""
+    actual = actual or ''
+    for separator in (':', ' - ', ' – ', ' — ', '('):
+        if separator not in actual:
+            continue
+        if normalize(actual.split(separator, 1)[0]) == wanted:
+            return True
+    return False
+
+
 def candidate_score(album, title, author=None, library=None):
     wanted_title = normalize(title)
-    actual_title = normalize(album.attrib.get('title'))
+    raw_actual_title = album.attrib.get('title') or ''
+    actual_title = normalize(raw_actual_title)
     if not wanted_title or not actual_title:
         return None
     ratio = difflib.SequenceMatcher(None, wanted_title, actual_title).ratio()
     if actual_title == wanted_title:
         score = 1000
-    elif actual_title.startswith(wanted_title) or wanted_title.startswith(actual_title):
-        score = 700
+    elif has_subtitle_prefix(raw_actual_title, wanted_title):
+        score = 900
+    elif actual_title.startswith(wanted_title + ' '):
+        score = 650
+    elif wanted_title.startswith(actual_title + ' '):
+        score = 600
     elif wanted_title in actual_title or actual_title in wanted_title:
         score = 550
     elif ratio >= 0.55:
