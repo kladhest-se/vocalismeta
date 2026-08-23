@@ -37,7 +37,7 @@ function e(string $value): string
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A lightweight metadata agent that makes audiobook libraries feel native in Plex.">
-  <meta name="theme-color" content="#0a0c0c">
+  <meta name="theme-color" content="#1e1e2e">
   <title><?= e($project['name']) ?> — Plex audiobook metadata</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
@@ -58,34 +58,14 @@ function e(string $value): string
   </header>
 
   <section class="hero" id="top">
-    <div class="hero-copy">
-      <div class="eyebrow"><span></span> Plex audiobook metadata agent</div>
-      <h1>Better metadata.<br><em>Better listening.</em></h1>
-      <p class="lead">VocalisMeta turns audiobook files into a clean, richly organized Plex library—using trusted catalog data, embedded tags, and your local artwork.</p>
-      <div class="hero-actions">
-        <a class="button primary" href="#install">Install VocalisMeta <span>→</span></a>
-        <a class="button secondary" href="<?= e($project['github_web']) ?>/blob/main/CLIENT_INTEGRATION.md">Player integration</a>
-      </div>
-      <div class="hero-meta"><span>v<?= e($project['version']) ?></span><span>Runs inside Plex</span><span>No separate service</span></div>
+    <p class="eyebrow">Plex audiobook metadata agent</p>
+    <h1>Clean metadata for<br><em>better listening.</em></h1>
+    <p class="lead">VocalisMeta organizes audiobook libraries with accurate recording data, authors, narrators, series, covers, and stable identities—all stored directly in Plex.</p>
+    <div class="hero-actions">
+      <a class="button primary" href="#install">Install VocalisMeta <span>→</span></a>
+      <a class="button secondary" href="<?= e($project['github_web']) ?>/blob/main/CLIENT_INTEGRATION.md">Player integration</a>
     </div>
-
-    <div class="hero-visual" aria-label="Example audiobook metadata card">
-      <div class="glow"></div>
-      <div class="book-cover">
-        <span class="cover-kicker">AUDIOBOOK</span>
-        <strong>THE<br>LONG<br>STORY</strong>
-        <span class="cover-author">A. N. AUTHOR</span>
-        <div class="sound-lines"><i></i><i></i><i></i><i></i><i></i></div>
-      </div>
-      <div class="metadata-card">
-        <div class="status"><span></span> MATCHED · AUDIBLE US</div>
-        <h2>The Long Story</h2>
-        <p>A. N. Author · Narrated by N. Reader</p>
-        <div class="tags"><span>Series: Great Tales</span><span>Book 3</span></div>
-        <div class="meter"><i></i></div>
-        <div class="card-foot"><span>11h 42m</span><span>Unabridged</span><span>English</span></div>
-      </div>
-    </div>
+    <div class="hero-meta"><span>v<?= e($project['version']) ?></span><span>Runs inside Plex</span><span>No separate service</span></div>
   </section>
 
   <section class="sources" aria-label="Metadata sources">
@@ -98,14 +78,13 @@ function e(string $value): string
   <section class="section" id="features">
     <div class="section-heading">
       <p class="section-label">Designed for audiobooks</p>
-      <h2>Your files already tell a story.<br>VocalisMeta fills in the details.</h2>
-      <p>Provider metadata stays authoritative, enrichment fills only missing fields, and local choices remain under your control.</p>
+      <h2>The details a music library leaves out.</h2>
+      <p>Recording metadata remains authoritative, enrichment fills only the gaps, and local choices stay under your control.</p>
     </div>
-    <div class="feature-grid">
+    <div class="feature-list">
       <?php foreach ($features as $index => [$title, $description]): ?>
         <article class="feature">
           <span class="feature-number">0<?= $index + 1 ?></span>
-          <div class="feature-icon icon-<?= $index + 1 ?>" aria-hidden="true"><i></i><b></b></div>
           <h3><?= e($title) ?></h3>
           <p><?= e($description) ?></p>
         </article>
@@ -114,23 +93,23 @@ function e(string $value): string
   </section>
 
   <section class="section architecture" id="architecture">
-    <div class="section-heading compact">
+    <div class="section-heading">
       <p class="section-label">Inside Plex, where it belongs</p>
-      <h2>One metadata path.<br>No extra service to run.</h2>
+      <h2>One path. No companion server.</h2>
+      <p>VocalisMeta talks to metadata providers during matching and writes the result into Plex. Audiobook players continue talking only to Plex.</p>
     </div>
-    <div class="flow">
-      <?php foreach ($flow as $index => $step): ?>
-        <div class="flow-step">
-          <span><?= $index + 1 ?></span><strong><?= e($step) ?></strong>
-          <?php if ($index < count($flow) - 1): ?><i aria-hidden="true">→</i><?php endif; ?>
-        </div>
-      <?php endforeach; ?>
-    </div>
-    <div class="contract">
-      <div><span class="contract-dot"></span><p>Stable identity contract</p></div>
-      <code>spokenmeta:audible:us:B08G9PRS1K</code>
-      <p>Clients can use stable recording and work keys plus optional Contract v3 contributor, publication, production, and rating metadata—all through Plex.</p>
-      <a href="<?= e($project['github_web']) ?>/blob/main/client-contract/metadata-contract-v3.json">Machine-readable contract v3 →</a>
+    <div>
+      <ol class="flow">
+        <?php foreach ($flow as $index => $step): ?>
+          <li><span>0<?= $index + 1 ?></span><strong><?= e($step) ?></strong></li>
+        <?php endforeach; ?>
+      </ol>
+      <div class="contract">
+        <strong>Stable identity contract</strong>
+        <code>spokenmeta:audible:us:B08G9PRS1K</code>
+        <p>Clients can use stable recording, work, and contributor identities directly from Plex.</p>
+        <a class="text-link" href="<?= e($project['github_web']) ?>/blob/main/client-contract/metadata-contract-v3.json">Machine-readable contract v3 →</a>
+      </div>
     </div>
   </section>
 
@@ -139,24 +118,22 @@ function e(string $value): string
       <p class="section-label">Recommended audiobook player</p>
       <h2>Metadata made to be heard.</h2>
       <p>Pair VocalisMeta with VocalisBook for an audiobook-first Plex experience across your Apple devices.</p>
+      <div class="platforms"><span>macOS</span><span>iPhone</span><span>iPad</span><span>Apple TV</span></div>
       <a class="button primary" href="<?= e($project['player_web']) ?>">Discover VocalisBook <span>→</span></a>
     </div>
-    <div class="player-card">
-      <span class="player-mark">V</span>
-      <div><strong>VocalisBook</strong><p>Audiobooks from your Plex library.</p></div>
-      <div class="player-platforms"><span>macOS</span><span>iPhone</span><span>iPad</span><span>Apple TV</span></div>
-    </div>
+    <span class="player-mark" aria-hidden="true">V</span>
   </section>
 
   <section class="section install" id="install">
     <div class="install-copy">
       <p class="section-label">Direct installation</p>
-      <h2>A clean, predictable Plex bundle.</h2>
-      <p>Run the public installer for the stable release or the latest developer build. It validates the bundle, restarts Plex, checks startup, and rolls back on failure.</p>
+      <h2>Install directly on Plex.</h2>
+      <p>The installer validates the bundle, restarts Plex, checks startup, and rolls back automatically if validation fails.</p>
       <ul><li>Static development version <?= e($project['version']) ?></li><li>Runs entirely inside Plex</li><li>No companion service</li></ul>
+      <a class="repository-link" href="<?= e($project['github_web']) ?>">View source and documentation on GitHub →</a>
     </div>
     <div class="terminal">
-      <div class="terminal-top"><span></span><span></span><span></span><b>INSTALL</b></div>
+      <div class="terminal-top">INSTALL</div>
       <pre><code><span>$</span> curl -fsSL \
   <?= e($project['installer']) ?> | \
   sudo bash -s -- --release v<?= e($project['version']) ?>
@@ -165,17 +142,16 @@ function e(string $value): string
   <?= e($project['installer']) ?> | \
   sudo bash -s -- --developer</code></pre>
     </div>
-    <div class="repository-card">
-      <p class="section-label">Public source repository</p>
-      <strong>GitHub</strong>
-      <code><?= e($project['github_web']) ?></code>
-    </div>
   </section>
 
   <footer>
     <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>VocalisMeta</span></a>
     <p>Metadata for audiobooks in Plex.</p>
-    <div><a href="<?= e($project['github_web']) ?>">GitHub</a><a href="<?= e($project['player_web']) ?>">VocalisBook</a><a href="<?= e($project['github_web']) ?>/blob/main/README.md">Documentation</a><a href="<?= e($project['github_web']) ?>/blob/main/LICENSE">MIT License</a></div>
+    <div class="footer-support" aria-label="Support VocalisMeta on Ko-fi">
+      <script type="text/javascript" src="https://storage.ko-fi.com/cdn/widget/Widget_2.js"></script>
+      <script type="text/javascript">kofiwidget2.init('Support me on Ko-fi', '#73a9f5', 'R7P325M7NE');kofiwidget2.draw();</script>
+    </div>
+    <div class="footer-links"><a href="<?= e($project['github_web']) ?>">GitHub</a><a href="<?= e($project['player_web']) ?>">VocalisBook</a><a href="<?= e($project['github_web']) ?>/blob/main/README.md">Documentation</a><a href="<?= e($project['github_web']) ?>/blob/main/LICENSE">MIT License</a></div>
   </footer>
 </main>
 </body>

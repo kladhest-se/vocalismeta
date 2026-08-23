@@ -1,8 +1,8 @@
 # VocalisMeta public website
 
 This is the lightweight public landing page for VocalisMeta. It uses plain PHP
-and CSS, has no package-manager dependencies, loads no third-party assets, and
-does not need a database.
+and CSS, has no package-manager dependencies, and does not need a database. The
+only third-party asset is the Ko-fi support widget loaded from Ko-fi's CDN.
 
 ## Run locally
 

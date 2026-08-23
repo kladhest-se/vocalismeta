@@ -4,6 +4,9 @@
 
 ### Added
 
+- Ko-fi support links on the public VocalisMeta website and GitHub README.
+- Simplified Catppuccin Mocha-inspired public website with clearer typography,
+  fewer visual panels, and no decorative book mockup.
 - Portable deterministic `Contributor-ID: narrator:name:<fingerprint>`
   fallback metadata when Audible or Ljudboksarkivet supplies narrator names
   without person IDs.

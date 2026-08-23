@@ -10,6 +10,8 @@ For the best listening experience, use VocalisMeta with
 [VocalisBook](https://vocalisbook.kladhest.se) for macOS, iPhone, iPad, and
 Apple TV.
 
+[Support VocalisMeta on Ko-fi](https://ko-fi.com/R7P325M7NE)
+
 ## Features
 
 - Audible matching across multiple regions
