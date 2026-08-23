@@ -31,9 +31,10 @@ identity.
 
 Contract v3 is also enabled by default and can be disabled. Its five additional
 Mood prefixes are reserved when enabled and must not enter the author index.
-Values are emitted only from explicit provider data: no person identifier,
-production type, or publication year is manufactured from a name, cast size,
-title, or filename.
+Provider identities, production type, and publication year are emitted only
+from explicit provider data. When Audible exposes a narrator name without a
+person ID, VocalisMeta may also emit the documented deterministic `name`-source
+narrator fallback. That fallback is portable but not authoritative.
 The data is stored in Plex, so a compatible player still needs access only to
 Plex.
 

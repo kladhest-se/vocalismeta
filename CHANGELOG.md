@@ -4,6 +4,8 @@
 
 ### Added
 
+- Portable deterministic `Contributor-ID: narrator:name:<fingerprint>`
+  fallback metadata when Audible supplies narrator names without person IDs.
 - Active `0.1.1` development version reporting in the Plex bundle and runtime
   startup log, while the immutable stable release remains `v0.1.0`.
 - Last-known-good author, series, sequence, language, edition, and valid

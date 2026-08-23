@@ -312,9 +312,11 @@ and can be disabled in the agent.
 Contracts v2 and v3 are enabled by default but remain configurable. Existing
 albums do not gain these fields until Plex refreshes their metadata. Work
 identity, Open Library contributor IDs, and first-publication year require a
-confident Open Library match. Audible and LibriVox contributor IDs require an
-authoritative person identifier in the provider response; plain narrator Style
-names are the expected fallback. Production requires an explicit provider
+confident Open Library match. Audible and LibriVox provider contributor IDs
+require an authoritative person identifier in the provider response. When
+Audible supplies a narrator name but no narrator identifier, VocalisMeta emits
+a deterministic name-derived narrator fallback in addition to the plain
+narrator Style value. Production requires an explicit provider
 label, and rating source/count require usable provider rating data. Treat every
 missing optional field as unknown.
 
@@ -324,13 +326,17 @@ Contributor identities use:
 Contributor-ID: author:audible:B00G0WYW92 = Andy Weir
 Contributor-ID: author:openlibrary:OL2162289A = Andy Weir
 Contributor-ID: narrator:librivox:20 = Ray Example
+Contributor-ID: narrator:name:9303478f4aa8e7a9 = Ray Porter
 ```
 
 Split once at ` = ` to separate the stable role/source/identifier tuple from
 the display name. Validate the source-specific identifier before using it.
-Supported roles are currently `author` and `narrator`; supported sources are
-`audible`, `openlibrary`, and `librivox`. Names remain display values and must
-not be used as stable person keys.
+Supported roles are currently `author` and `narrator`; provider sources are
+`audible`, `openlibrary`, and `librivox`. The `name` source is restricted to
+narrators and uses a deterministic 64-bit fingerprint of the normalized display
+name. It is portable across Plex servers but is not an authoritative person ID:
+different spellings remain distinct and identical names can collide
+semantically.
 
 After validation, form the provider-scoped contributor key as:
 
