@@ -30,11 +30,10 @@ projects should run the same vectors in CI. The JSON contract is build-time
 integration data; it is not a Plex service endpoint and is not written into
 user-visible metadata.
 
-The public product name changed from SpokenMeta to VocalisMeta without changing
-the wire contract. The Plex provider remains
-`com.plexapp.agents.spokenmeta`, and canonical book keys retain the
-`spokenmeta:` prefix. Clients must not rewrite existing keys to a new brand
-prefix.
+The Plex provider `com.plexapp.agents.spokenmeta` and canonical `spokenmeta:`
+key prefix are stable wire-contract identifiers for VocalisMeta. Their spelling
+is intentionally independent of the public product name. Clients must preserve
+these identifiers exactly and must not rewrite them to a new brand prefix.
 
 ## Plex hierarchy and field mapping
 

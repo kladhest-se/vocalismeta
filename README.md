@@ -71,6 +71,3 @@ VocalisMeta reads Ljudboksarkivet's public sitemap and structured audiobook
 metadata, then stores the accepted result in Plex. Audiobook players still talk
 only to Plex; no companion service or Ljudboksarkivet client integration is
 required.
-
-If upgrading from `SpokenMeta.bundle`, remove the old bundle first. Do not keep
-both bundles installed because they use the same internal Plex provider ID.
