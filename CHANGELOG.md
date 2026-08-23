@@ -26,6 +26,9 @@
   publishers, release dates, summaries, genres, series/sequence relationships,
   ratings, and cover artwork stored directly in Plex.
 - Swedish language aliases across recording and enrichment matching.
+- Public per-book Plex metadata inspector with automatic current rating-key
+  resolution, optional forced refresh, token-safe requests, and text, JSON, or
+  raw XML output.
 
 ## 0.1.0 - 2026-08-15
 

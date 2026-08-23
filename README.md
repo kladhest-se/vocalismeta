@@ -72,5 +72,22 @@ metadata, then stores the accepted result in Plex. Audiobook players still talk
 only to Plex; no companion service or Ljudboksarkivet client integration is
 required.
 
+## Inspect one audiobook
+
+Download the public inspector on the Plex server, then resolve and inspect a
+book by title and author. Running as root lets it read Plex's local token.
+
+```bash
+curl -fsSLo /tmp/inspect-plex-book.py \
+  https://raw.githubusercontent.com/kladhest-se/vocalismeta/main/scripts/inspect-plex-book.py
+chmod +x /tmp/inspect-plex-book.py
+sudo /tmp/inspect-plex-book.py "Dune" \
+  --author "Frank Herbert" \
+  --library "Audiobooks"
+```
+
+Add `--refresh` to force-refresh that album before inspection, `--json` for
+machine-readable diagnostics, or `--xml` for Plex's raw per-item response.
+
 If upgrading from `SpokenMeta.bundle`, remove the old bundle first. Do not keep
 both bundles installed because they use the same internal Plex provider ID.
