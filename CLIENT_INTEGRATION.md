@@ -313,12 +313,12 @@ Contracts v2 and v3 are enabled by default but remain configurable. Existing
 albums do not gain these fields until Plex refreshes their metadata. Work
 identity, Open Library contributor IDs, and first-publication year require a
 confident Open Library match. Audible and LibriVox provider contributor IDs
-require an authoritative person identifier in the provider response. When
-Audible supplies a narrator name but no narrator identifier, VocalisMeta emits
-a deterministic name-derived narrator fallback in addition to the plain
-narrator Style value. Production requires an explicit provider
-label, and rating source/count require usable provider rating data. Treat every
-missing optional field as unknown.
+require an authoritative person identifier in the provider response. When a
+catalog such as Audible or Ljudboksarkivet supplies a narrator name but no
+narrator identifier, VocalisMeta emits a deterministic name-derived narrator
+fallback in addition to the plain narrator Style value. Production requires an
+explicit provider label, and rating source/count require usable provider rating
+data. Treat every missing optional field as unknown.
 
 Contributor identities use:
 
@@ -349,7 +349,10 @@ names match.
 
 `Work-Published: <year>` is the literary work's first publication year from an
 authoritative Open Library match. Plex `originally_available_at` remains the
-audiobook recording release date. Keep both values.
+audiobook recording release date. Keep both values. VocalisMeta omits the Open
+Library work relationship when its claimed first-publication year is later than
+the known recording release year; cover art, genres, and summaries may still be
+used independently from that document.
 
 `Production:` is emitted only for explicit provider values such as `Full cast`,
 `Dramatized`, or `Community recording`. Never derive it from the number of
