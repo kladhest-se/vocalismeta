@@ -1,8 +1,8 @@
 # VocalisMeta player integration
 
 This document is the client contract for applications that read a Plex music
-library managed by VocalisMeta. It is written so it can be supplied directly to
-another coding session implementing an audiobook player.
+library managed by VocalisMeta. It is a standalone implementation reference for
+audiobook client developers.
 
 ## Scope
 
@@ -352,7 +352,25 @@ authoritative Open Library match. Plex `originally_available_at` remains the
 audiobook recording release date. Keep both values. VocalisMeta omits the Open
 Library work relationship when its claimed first-publication year is later than
 the known recording release year; cover art, genres, and summaries may still be
-used independently from that document.
+used independently from that document. Rejection removes the associated
+`Work-ID`, `Work-Published`, and Open Library author `Contributor-ID` values so
+clients never retain a partial relationship to the rejected work.
+
+For example, a refreshed Swedish recording with Plex release year `2008` must
+not retain an Open Library work claiming first publication in `2009`. Other
+independently sourced metadata remains valid. A Ljudboksarkivet result with
+narrator Mark Levengood can therefore expose:
+
+```text
+Style: Mark Levengood
+Contributor-ID: narrator:name:e12832aa5ccb9345 = Mark Levengood
+Rating-Source: Ljudboksarkivet
+```
+
+while omitting the rejected `Work-ID` and `Work-Published` values. The `name`
+identifier is derived from the normalized narrator display name and is stable
+across Plex servers, but retains the non-authoritative limitations described
+above.
 
 `Production:` is emitted only for explicit provider values such as `Full cast`,
 `Dramatized`, or `Community recording`. Never derive it from the number of

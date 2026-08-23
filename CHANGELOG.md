@@ -9,6 +9,8 @@
   without person IDs.
 - Rejection and cleanup of Open Library work relationships whose claimed first
   publication year occurs after the known audiobook recording release.
+- Client documentation for the verified Ljudboksarkivet narrator fallback and
+  complete cleanup of rejected Open Library work relationships.
 - Active `0.1.1` development version reporting in the Plex bundle and runtime
   startup log, while the immutable stable release remains `v0.1.0`.
 - Last-known-good author, series, sequence, language, edition, and valid
