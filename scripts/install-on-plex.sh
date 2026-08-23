@@ -5,7 +5,6 @@ repository='https://github.com/kladhest-se/vocalismeta.git'
 plex_data_dir="${PLEX_MEDIA_SERVER_DATA_DIR:-/var/lib/plexmediaserver/Library/Application Support/Plex Media Server}"
 plugin_root="${VOCALISMETA_PLUGIN_DIRECTORY:-$plex_data_dir/Plug-ins}"
 plugin_dir="$plugin_root/VocalisMeta.bundle"
-legacy_plugin_dir="$plugin_root/SpokenMeta.bundle"
 log_file="${VOCALISMETA_LOG_FILE:-$plex_data_dir/Logs/PMS Plugin Logs/com.plexapp.agents.spokenmeta.log}"
 service_name="${PLEX_SERVICE_NAME:-plexmediaserver}"
 plex_user="${PLEX_USER:-plex}"
@@ -210,16 +209,8 @@ if invalid:
 PY
 
 mkdir -p -- "$plugin_root"
-if [[ -e "$plugin_dir" && -e "$legacy_plugin_dir" ]]; then
-  echo 'Both VocalisMeta.bundle and legacy SpokenMeta.bundle are installed.' >&2
-  echo 'Remove one bundle before running the installer.' >&2
-  exit 1
-fi
 if [[ -e "$plugin_dir" ]]; then
   backup_restore_target="$plugin_dir"
-elif [[ -e "$legacy_plugin_dir" ]]; then
-  backup_restore_target="$legacy_plugin_dir"
-  echo 'Migrating legacy SpokenMeta.bundle to VocalisMeta.bundle'
 fi
 if [[ -n "$backup_restore_target" ]]; then
   backup_dir="$(mktemp -d "$plugin_root/.vocalismeta-backup.XXXXXXXX")"

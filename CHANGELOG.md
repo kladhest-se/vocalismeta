@@ -38,8 +38,7 @@
 ### Added
 
 - Direct audiobook matching and metadata from regional Audible catalogs.
-- VocalisMeta public branding with compatibility-preserving SpokenMeta Plex and
-  client identity formats.
+- Compatibility-preserving Plex and client identity formats.
 - Titles, authors, narrators, series, genres, dates, summaries, ratings, and covers.
 - Embedded Audible and LibriVox IDs, ISBN, region, edition hints, and artwork
   across multi-part books.
