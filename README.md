@@ -13,6 +13,7 @@ Apple TV.
 ## Features
 
 - Audible matching across multiple regions
+- Optional Ljudboksarkivet matching for Swedish audiobooks
 - Open Library, Google Books, and optional LibriVox enrichment
 - Authors, narrators, genres, series, sequence, language, and edition metadata
 - Stable audiobook, work, and contributor identities for Plex clients
@@ -59,6 +60,17 @@ Then configure Plex:
 4. Select **Plex Music Scanner** and **VocalisMeta Agent**.
 5. Enable **Store track progress** when available.
 6. Save the library and run **Refresh All Metadata**.
+
+### Swedish audiobooks
+
+In the VocalisMeta agent settings, enable **Ljudboksarkivet matching for Swedish
+audiobooks** and select either `fallback` (try after Audible) or `preferred`
+(try before Audible). It is disabled by default.
+
+VocalisMeta reads Ljudboksarkivet's public sitemap and structured audiobook
+metadata, then stores the accepted result in Plex. Audiobook players still talk
+only to Plex; no companion service or Ljudboksarkivet client integration is
+required.
 
 If upgrading from `SpokenMeta.bundle`, remove the old bundle first. Do not keep
 both bundles installed because they use the same internal Plex provider ID.

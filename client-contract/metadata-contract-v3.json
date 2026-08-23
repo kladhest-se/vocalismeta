@@ -51,7 +51,8 @@
       "prefix": "Rating-Source: ",
       "meaning": "album_rating_provider",
       "allowed_values": [
-        "Audible"
+        "Audible",
+        "Ljudboksarkivet"
       ],
       "multiple": false
     },

@@ -39,6 +39,19 @@
     "default": "fallback"
   },
   {
+    "id": "ljudboksarkivet_enabled",
+    "label": "Enable Ljudboksarkivet matching for Swedish audiobooks",
+    "type": "bool",
+    "default": "false"
+  },
+  {
+    "id": "ljudboksarkivet_mode",
+    "label": "Ljudboksarkivet matching mode when enabled",
+    "type": "enum",
+    "values": ["fallback", "preferred"],
+    "default": "fallback"
+  },
+  {
     "id": "openlibrary_enabled",
     "label": "Use Open Library to fill missing descriptions, genres, dates, or covers",
     "type": "bool",

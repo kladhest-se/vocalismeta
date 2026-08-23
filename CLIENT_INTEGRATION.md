@@ -348,10 +348,11 @@ audiobook recording release date. Keep both values.
 `Production:` is emitted only for explicit provider values such as `Full cast`,
 `Dramatized`, or `Community recording`. Never derive it from the number of
 narrators. A Plex album rating may be accompanied by `Rating-Source: Audible`
-and `Rating-Count: <integer>`; do not interpret a count without a valid source.
+or `Rating-Source: Ljudboksarkivet` and `Rating-Count: <integer>`; do not
+interpret a count without a valid source.
 
 All Contract v3 values come from Plex metadata. The player does not call
-Audible, Open Library, Google Books, or LibriVox directly.
+Audible, Ljudboksarkivet, Open Library, Google Books, or LibriVox directly.
 
 ## Source precedence and trust
 
@@ -362,21 +363,26 @@ The identity/search order is:
 3. Embedded LibriVox project identity.
 4. LibriVox-first matching for media paths explicitly containing `librivox`;
    failure falls back to a stable local identity rather than Audible.
-5. Unhinted recording matching according to the configured LibriVox mode:
-   `hinted_only` uses Audible only, `fallback` tries Audible then LibriVox, and
-   `preferred` tries LibriVox then Audible.
-6. The other enabled recording provider when the selected mode permits it.
-7. Embedded ISBN identity.
-8. Deterministic local identity.
+5. Optional Ljudboksarkivet matching for Swedish audiobooks according to its
+   configured mode: `fallback` tries it after Audible, while `preferred` tries
+   it before Audible. It is disabled by default.
+6. Unhinted recording matching according to the configured LibriVox mode:
+   `hinted_only` uses the other enabled catalog providers, `fallback` tries
+   LibriVox after them, and `preferred` tries LibriVox before Audible.
+7. The other enabled recording provider when the selected modes permit it.
+8. Embedded ISBN identity.
+9. Deterministic local identity.
 
 The provider search order does not change the stable identity format. A client
 must key an accepted result from its parsed GUID, not infer identity from which
 provider was searched first.
 
-Audible or LibriVox remains authoritative for recording-specific metadata once
-matched. Embedded series/authors/narrators fill only provider gaps when their
-preferences are enabled. For an ISBN/local match, scanner and embedded values
-are preserved.
+Audible, Ljudboksarkivet, or LibriVox remains authoritative for
+recording-specific metadata once matched. Ljudboksarkivet results use a
+portable ISBN recording identity when an ISBN is published, otherwise the
+normal deterministic local identity. Embedded series/authors/narrators fill
+only provider gaps when their preferences are enabled. For an ISBN/local match,
+scanner and embedded values are preserved.
 
 Open Library and Google Books are enrichment providers, not recording match
 providers. They may fill only missing descriptions, dates, genres, ISBN
@@ -393,6 +399,7 @@ The album poster may come from:
 - a local sidecar such as `cover.jpg`;
 - embedded ID3 APIC, MP4/M4B `covr`, FLAC picture, or Vorbis picture data;
 - Audible;
+- Ljudboksarkivet;
 - LibriVox;
 - Open Library or Google Books as a missing-cover fallback.
 

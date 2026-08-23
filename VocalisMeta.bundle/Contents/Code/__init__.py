@@ -85,6 +85,16 @@ from librivox_core import (
     strip_book_id_hint as strip_librivox_id_hint,
     valid_books_response as valid_librivox_response,
 )
+from ljudboksarkivet_core import (
+    SITEMAP_URL as ljudboksarkivet_sitemap_url,
+    as_product as ljudboksarkivet_product,
+    audiobook_from_html as ljudboksarkivet_audiobook,
+    book_slugs as ljudboksarkivet_book_slugs,
+    book_url as ljudboksarkivet_book_url,
+    candidate_slugs as ljudboksarkivet_candidate_slugs,
+    search_result_label as ljudboksarkivet_result_label,
+    sitemap_urls as ljudboksarkivet_sitemap_urls,
+)
 from openlibrary_core import (
     cover_urls as openlibrary_cover_urls,
     document_isbns as openlibrary_isbns,
@@ -115,6 +125,8 @@ from client_metadata_core import (
 
 AGENT_NAME = 'VocalisMeta Agent'
 VERSION = '0.1.1'
+LJUDBOKSARKIVET_SEARCH_CACHE_SECONDS = 6 * 60 * 60
+LJUDBOKSARKIVET_INDEX_STATE = {'slugs': None}
 SERIES_MOOD_PREFIX = 'Series: '
 SEQUENCE_MOOD_PREFIX = 'Sequence: '
 LANGUAGE_MOOD_PREFIX = 'Language: '
@@ -482,6 +494,60 @@ def request_json(url, cache_time=CACHE_1DAY, request_status=None, headers=None):
         last_attempt
     )
     return {}
+
+
+def request_text(url, cache_time=CACHE_1DAY, request_status=None, headers=None):
+    last_error = None
+    last_status = None
+    last_attempt = 0
+    try:
+        attempts = max(1, min(5, int(pref('request_retries', 3))))
+    except (TypeError, ValueError):
+        attempts = 3
+    try:
+        timeout = max(10, min(120, int(pref('request_timeout', 45))))
+    except (TypeError, ValueError):
+        timeout = 45
+    for attempt in range(1, attempts + 1):
+        last_attempt = attempt
+        try:
+            response = HTTP.Request(
+                url, timeout=timeout, cacheTime=cache_time,
+                immediate=True, headers=headers or {}
+            )
+            try:
+                body = response.content
+            except AttributeError:
+                body = str(response)
+            if body is None or body == '':
+                raise ValueError('empty response')
+            set_request_status(request_status, True, 'ok', None, attempt)
+            return body
+        except Exception as error:
+            last_error = error
+            last_status = status_from_error(error)
+            if attempt >= attempts or not should_retry(last_status):
+                break
+            delay = backoff_seconds(attempt, error, maximum=30)
+            log(
+                'WARN',
+                'Transient text request failure (status=%s, attempt=%d/%d); '
+                'retrying in %ds: %s',
+                last_status if last_status is not None else 'network',
+                attempt, attempts, delay, redact_url(error)
+            )
+            if delay:
+                sleep(delay)
+    log(
+        'ERROR', 'Text request failed (status=%s, attempts=%d): %s (%s)',
+        last_status if last_status is not None else 'network',
+        last_attempt, redact_url(url), redact_url(last_error)
+    )
+    set_request_status(
+        request_status, False, 'provider_unavailable',
+        last_status if last_status is not None else 'network', last_attempt
+    )
+    return ''
 
 
 def new_provider_status():
@@ -957,7 +1023,10 @@ def existing_v3_enrichment_tags(container):
             'Production: Community recording',
         ):
             values.append(item)
-        elif item == 'Rating-Source: Audible':
+        elif item in (
+            'Rating-Source: Audible',
+            'Rating-Source: Ljudboksarkivet',
+        ):
             values.append(item)
         elif re.match(r'^Rating-Count: [0-9]+$', item):
             values.append(item)
@@ -1042,6 +1111,19 @@ def librivox_v3_tags(book):
         return []
     values = librivox_contributor_tags(book)
     values.append(PRODUCTION_MOOD_PREFIX + 'Community recording')
+    return values
+
+
+def ljudboksarkivet_v3_tags(book):
+    if not extended_player_metadata_enabled():
+        return []
+    values = []
+    if book.get('rating') is not None:
+        values.append(RATING_SOURCE_MOOD_PREFIX + 'Ljudboksarkivet')
+        if book.get('rating_count') is not None:
+            values.append(
+                RATING_COUNT_MOOD_PREFIX + to_text(book.get('rating_count'))
+            )
     return values
 
 
@@ -1166,6 +1248,21 @@ def librivox_mode():
         return 'disabled'
     mode = to_text(pref('librivox_mode', 'fallback')).strip().lower()
     if mode in ('hinted_only', 'fallback', 'preferred'):
+        return mode
+    return 'fallback'
+
+
+def ljudboksarkivet_enabled():
+    return as_bool(pref('ljudboksarkivet_enabled', False), False)
+
+
+def ljudboksarkivet_mode():
+    if not ljudboksarkivet_enabled():
+        return 'disabled'
+    mode = to_text(
+        pref('ljudboksarkivet_mode', 'fallback')
+    ).strip().lower()
+    if mode in ('fallback', 'preferred'):
         return mode
     return 'fallback'
 
@@ -1512,6 +1609,128 @@ def fetch_librivox_books(title, author='', limit=20, provider_status=None):
     return librivox_books(response)
 
 
+def fetch_ljudboksarkivet_slugs(provider_status=None):
+    cached = LJUDBOKSARKIVET_INDEX_STATE.get('slugs')
+    if cached is not None:
+        return cached
+    request_status = {}
+    index_payload = request_text(
+        ljudboksarkivet_sitemap_url, CACHE_1WEEK, request_status,
+        {'Accept': 'application/xml,text/xml;q=0.9,*/*;q=0.1'}
+    )
+    sitemap_urls = ljudboksarkivet_sitemap_urls(index_payload)
+    record_provider_response(
+        provider_status, request_status, bool(sitemap_urls)
+    )
+    if not sitemap_urls:
+        return []
+    slugs = []
+    seen = set()
+    for sitemap_url in sitemap_urls:
+        request_status = {}
+        payload = request_text(
+            sitemap_url, CACHE_1WEEK, request_status,
+            {'Accept': 'application/xml,text/xml;q=0.9,*/*;q=0.1'}
+        )
+        current = ljudboksarkivet_book_slugs(payload)
+        record_provider_response(
+            provider_status, request_status, bool(current)
+        )
+        for slug in current:
+            if slug not in seen:
+                seen.add(slug)
+                slugs.append(slug)
+    if slugs:
+        LJUDBOKSARKIVET_INDEX_STATE['slugs'] = slugs
+        log(
+            'DEBUG', 'Loaded %d Ljudboksarkivet catalogue entries',
+            len(slugs)
+        )
+    return slugs
+
+
+def fetch_ljudboksarkivet_book(slug, provider_status=None):
+    url = ljudboksarkivet_book_url(slug)
+    if not url:
+        return None
+    request_status = {}
+    payload = request_text(
+        url, LJUDBOKSARKIVET_SEARCH_CACHE_SECONDS, request_status,
+        {'Accept': 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.1'}
+    )
+    book = ljudboksarkivet_audiobook(payload, url)
+    record_provider_response(provider_status, request_status, bool(book))
+    return book
+
+
+def ljudboksarkivet_identity(book, duration=None):
+    authors = '; '.join(book.get('authors') or [])
+    return book_identity(
+        book.get('title'), authors,
+        book.get('duration_minutes') or duration,
+        book.get('language') or 'sv', None,
+        [book.get('isbn')] if book.get('isbn') else []
+    )
+
+
+def ljudboksarkivet_year(book):
+    value = text_field(book.get('release_date'))
+    try:
+        return int(value[:4])
+    except (TypeError, ValueError):
+        return None
+
+
+def ranked_ljudboksarkivet_matches(
+    title_variants, author, language, duration, narrators, year, threshold,
+    provider_status=None, required_isbn=''
+):
+    if not ljudboksarkivet_enabled():
+        return []
+    slugs = fetch_ljudboksarkivet_slugs(provider_status)
+    if not slugs:
+        return []
+    candidate_values = []
+    for title in title_variants or []:
+        for slug in ljudboksarkivet_candidate_slugs(title, slugs, 6):
+            if slug not in candidate_values:
+                candidate_values.append(slug)
+    ranked = []
+    for index in range(len(candidate_values)):
+        book = fetch_ljudboksarkivet_book(
+            candidate_values[index], provider_status
+        )
+        if not book:
+            continue
+        product = ljudboksarkivet_product(book)
+        if required_isbn:
+            if required_isbn not in product_isbns(product):
+                continue
+        best_score = 0
+        for title in title_variants or []:
+            score = score_product(
+                title, author, language, product, index,
+                duration, narrators, year, None,
+            )
+            if score > best_score:
+                best_score = score
+        if best_score >= threshold:
+            ranked.append((best_score, book))
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    return ranked
+
+
+def append_ljudboksarkivet_results(results, ranked, lang, manual):
+    for score, book in ranked:
+        append_search_result(
+            results, ljudboksarkivet_identity(book),
+            ljudboksarkivet_result_label(book), lang, score,
+            ljudboksarkivet_year(book)
+        )
+        if not manual:
+            break
+
+
 def ranked_librivox_matches(
     title, author, language, duration, narrators, year, threshold,
     provider_status=None
@@ -1835,7 +2054,7 @@ def enrich_and_apply_book_artwork(
 
 class VocalisMetaArtist(Agent.Artist):
     name = AGENT_NAME
-    languages = [Locale.Language.English, 'de', 'es', 'fr', 'it', 'ja']
+    languages = [Locale.Language.English, 'de', 'es', 'fr', 'it', 'ja', 'sv']
     primary_provider = True
     accepts_from = ['com.plexapp.agents.localmedia']
 
@@ -1931,7 +2150,7 @@ class VocalisMetaArtist(Agent.Artist):
 
 class VocalisMetaAlbum(Agent.Album):
     name = AGENT_NAME
-    languages = [Locale.Language.English, 'de', 'es', 'fr', 'it', 'ja']
+    languages = [Locale.Language.English, 'de', 'es', 'fr', 'it', 'ja', 'sv']
     primary_provider = True
     accepts_from = ['com.plexapp.agents.localmedia']
 
@@ -1943,6 +2162,7 @@ class VocalisMetaAlbum(Agent.Album):
         audible_catalog_hits = 0
         audible_provider_status = new_provider_status()
         librivox_provider_status = new_provider_status()
+        ljudboksarkivet_provider_status = new_provider_status()
         filename = media_filename(media)
         file_paths = media_file_paths(media)
         if not title or (title in UNKNOWN_VALUES and not manual):
@@ -2157,6 +2377,36 @@ class VocalisMetaAlbum(Agent.Album):
             and has_librivox_source_hint(filename, *file_paths)
         )
 
+        if ljudboksarkivet_mode() == 'preferred':
+            log(
+                'DEBUG',
+                'Preferred Ljudboksarkivet search before Audible for "%s"',
+                title,
+            )
+            ljudboksarkivet_ranked = ranked_ljudboksarkivet_matches(
+                title_variants, author, wanted_language, wanted_duration,
+                embedded.get('narrators'), wanted_year, audible_threshold,
+                ljudboksarkivet_provider_status,
+            )
+            append_ljudboksarkivet_results(
+                results, ljudboksarkivet_ranked, lang, manual
+            )
+            if ljudboksarkivet_ranked:
+                best_ljudboksarkivet = ljudboksarkivet_ranked[0]
+                identity = ljudboksarkivet_identity(
+                    best_ljudboksarkivet[1], wanted_duration
+                )
+                log_album_search_summary(
+                    'results', title, author,
+                    provider='ljudboksarkivet', identity=identity,
+                    score=best_ljudboksarkivet[0],
+                    reason='ljudboksarkivet_preferred',
+                    author_source=author_source,
+                    candidate_count=len(ljudboksarkivet_ranked),
+                    manual=manual,
+                )
+                return
+
         if librivox_path_hint:
             log(
                 'INFO',
@@ -2308,6 +2558,33 @@ class VocalisMetaAlbum(Agent.Album):
             )
             return
 
+        ljudboksarkivet_ranked = []
+        if ljudboksarkivet_mode() == 'fallback':
+            ljudboksarkivet_ranked = ranked_ljudboksarkivet_matches(
+                title_variants, author, wanted_language, wanted_duration,
+                embedded.get('narrators'), wanted_year, audible_threshold,
+                ljudboksarkivet_provider_status,
+            )
+            append_ljudboksarkivet_results(
+                results, ljudboksarkivet_ranked, lang, manual
+            )
+            if ljudboksarkivet_ranked:
+                best_ljudboksarkivet = ljudboksarkivet_ranked[0]
+                identity = ljudboksarkivet_identity(
+                    best_ljudboksarkivet[1], wanted_duration
+                )
+                log_album_search_summary(
+                    'results', title, author,
+                    provider='ljudboksarkivet', identity=identity,
+                    score=best_ljudboksarkivet[0],
+                    reason='ljudboksarkivet_fallback',
+                    author_source=author_source,
+                    candidate_count=len(ljudboksarkivet_ranked),
+                    catalog_hits=audible_catalog_hits,
+                    audible_queries=audible_queries, manual=manual,
+                )
+                return
+
         librivox_ranked = []
         if librivox_mode() == 'fallback':
             librivox_ranked = ranked_librivox_matches(
@@ -2335,6 +2612,7 @@ class VocalisMetaAlbum(Agent.Album):
             title, author, author_source, manual,
             [
                 ('audible', audible_provider_status),
+                ('ljudboksarkivet', ljudboksarkivet_provider_status),
                 ('librivox', librivox_provider_status),
             ],
             candidate_count=len(audible_candidates),
@@ -2589,6 +2867,90 @@ class VocalisMetaAlbum(Agent.Album):
             metadata, 'updated', 'librivox', 'ok', title, force
         )
 
+    def update_ljudboksarkivet(
+        self, metadata, media, lang, force, book, embedded
+    ):
+        previous_title = to_text(metadata.title).strip()
+        title = text_field(book.get('title'))
+        authors = list(book.get('authors') or [])
+        narrators = list(book.get('narrators') or [])
+        active_series = list(book.get('series') or [])
+        active_language = text_field(book.get('language')) or 'sv-SE'
+        active_abridged = embedded.get('abridged')
+        authors, active_series, active_language, active_abridged = (
+            preserve_relationship_fallbacks(
+                metadata, authors, active_series, active_language,
+                active_abridged, 'Ljudboksarkivet'
+            )
+        )
+        product = ljudboksarkivet_product(book)
+        set_value(metadata, 'title', title, force, True)
+        set_value(
+            metadata, 'title_sort',
+            sort_title_with_series_fallback(product, title, active_series),
+            force, True
+        )
+        set_value(
+            metadata, 'studio', text_field(book.get('publisher')),
+            force, True
+        )
+        set_value(
+            metadata, 'summary', text_field(book.get('description')),
+            force, True
+        )
+        date_value = text_field(book.get('release_date'))
+        if date_value:
+            try:
+                metadata.originally_available_at = Datetime.ParseDate(
+                    date_value
+                ).date()
+            except Exception as error:
+                log(
+                    'WARN', 'Could not parse Ljudboksarkivet date %s: %s',
+                    date_value, error
+                )
+        try:
+            rating = float(book.get('rating'))
+            best_rating = float(book.get('best_rating') or 10)
+            if best_rating > 0:
+                metadata.rating = min(10.0, max(
+                    0.0, rating * (10.0 / best_rating)
+                ))
+        except (TypeError, ValueError):
+            pass
+        book_genres = list(book.get('genres') or [])[:8]
+        if book_genres and not as_bool(pref('keep_existing_genres', False)):
+            replace_container(metadata.genres, book_genres)
+        if narrators:
+            replace_container(metadata.styles, narrators)
+        previous_work_identities = existing_work_identities(metadata.moods)
+        player_tags = merge_v3_tags(
+            existing_v3_enrichment_tags(metadata.moods),
+            ljudboksarkivet_v3_tags(book),
+        )
+        moods = relationship_moods(
+            authors, active_series, active_language, active_abridged,
+            previous_work_identities, player_tags
+        )
+        replace_container(metadata.moods, moods)
+        image_urls = []
+        if text_field(book.get('image')):
+            image_urls.append(text_field(book.get('image')))
+        enrich_and_apply_book_artwork(
+            metadata, media, product, title, authors,
+            active_language or lang, image_urls, embedded,
+            work_relationship_refresh_required(
+                previous_title, title, force
+            )
+        )
+        log(
+            'INFO', 'Updated Ljudboksarkivet audiobook "%s" (%s)',
+            title, metadata.id
+        )
+        log_album_update_summary(
+            metadata, 'updated', 'ljudboksarkivet', 'ok', title, force
+        )
+
     def update_local(
         self, metadata, media, lang, force, identity_kind, identity_value
     ):
@@ -2618,6 +2980,21 @@ class VocalisMetaAlbum(Agent.Album):
             if identity_value not in isbns:
                 isbns.insert(0, identity_value)
             embedded['isbns'] = isbns
+
+        if ljudboksarkivet_enabled():
+            title_variants = search_title_variants(title, filename) or [title]
+            lba_ranked = ranked_ljudboksarkivet_matches(
+                title_variants, author,
+                embedded.get('language') or lang,
+                media_duration_minutes(media), embedded.get('narrators'),
+                media_value(media, 'year'), 80, None,
+                identity_value if identity_kind == 'isbn' else '',
+            )
+            if lba_ranked:
+                self.update_ljudboksarkivet(
+                    metadata, media, lang, force, lba_ranked[0][1], embedded
+                )
+                return
 
         local_series = (
             embedded_series_entries(embedded)
