@@ -9,14 +9,30 @@
     "id": "region",
     "label": "Default Audible region",
     "type": "enum",
-    "values": ["au", "ca", "de", "es", "fr", "in", "it", "jp", "us", "uk"],
+    "values": [
+      "au",
+      "ca",
+      "de",
+      "es",
+      "fr",
+      "in",
+      "it",
+      "jp",
+      "us",
+      "uk"
+    ],
     "default": "us"
   },
   {
     "id": "max_results",
     "label": "Maximum search results",
     "type": "enum",
-    "values": ["10", "20", "25", "50"],
+    "values": [
+      "10",
+      "20",
+      "25",
+      "50"
+    ],
     "default": "20"
   },
   {
@@ -35,7 +51,11 @@
     "id": "librivox_mode",
     "label": "LibriVox matching mode when enabled",
     "type": "enum",
-    "values": ["hinted_only", "fallback", "preferred"],
+    "values": [
+      "hinted_only",
+      "fallback",
+      "preferred"
+    ],
     "default": "fallback"
   },
   {
@@ -48,7 +68,10 @@
     "id": "ljudboksarkivet_mode",
     "label": "Ljudboksarkivet matching mode when enabled",
     "type": "enum",
-    "values": ["fallback", "preferred"],
+    "values": [
+      "fallback",
+      "preferred"
+    ],
     "default": "fallback"
   },
   {
@@ -73,14 +96,23 @@
     "id": "enrichment_order",
     "label": "Book enrichment source priority",
     "type": "enum",
-    "values": ["openlibrary_first", "googlebooks_first"],
+    "values": [
+      "openlibrary_first",
+      "googlebooks_first"
+    ],
     "default": "openlibrary_first"
   },
   {
     "id": "enrichment_request_budget",
     "label": "Maximum enrichment API calls per album refresh",
     "type": "enum",
-    "values": ["2", "4", "6", "8", "12"],
+    "values": [
+      "2",
+      "4",
+      "6",
+      "8",
+      "12"
+    ],
     "default": "8"
   },
   {
@@ -159,28 +191,51 @@
     "id": "image_size",
     "label": "Requested cover size",
     "type": "enum",
-    "values": ["500", "1000", "2000", "3000"],
+    "values": [
+      "500",
+      "1000",
+      "2000",
+      "3000"
+    ],
     "default": "2000"
   },
   {
     "id": "artwork_preference",
     "label": "Album artwork preference",
     "type": "enum",
-    "values": ["local_first", "audible_first", "local_only", "audible_only"],
+    "values": [
+      "local_first",
+      "audible_first",
+      "local_only",
+      "audible_only"
+    ],
     "default": "local_first"
   },
   {
     "id": "request_retries",
     "label": "Maximum API request attempts",
     "type": "enum",
-    "values": ["1", "2", "3", "4", "5"],
+    "values": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+    ],
     "default": "3"
   },
   {
     "id": "request_timeout",
     "label": "API request timeout in seconds",
     "type": "enum",
-    "values": ["15", "30", "45", "60", "90", "120"],
+    "values": [
+      "15",
+      "30",
+      "45",
+      "60",
+      "90",
+      "120"
+    ],
     "default": "45"
   },
   {
@@ -193,7 +248,35 @@
     "id": "logging_level",
     "label": "Logging level",
     "type": "enum",
-    "values": ["DEBUG", "INFO", "WARN", "ERROR"],
+    "values": [
+      "DEBUG",
+      "INFO",
+      "WARN",
+      "ERROR"
+    ],
     "default": "INFO"
+  },
+  {
+    "id": "search_request_budget",
+    "label": "Maximum HTTP attempts per audiobook search",
+    "type": "enum",
+    "values": [
+      "12",
+      "24",
+      "48"
+    ],
+    "default": "24"
+  },
+  {
+    "id": "search_timeout",
+    "label": "Total audiobook search time limit in seconds",
+    "type": "enum",
+    "values": [
+      "30",
+      "60",
+      "90",
+      "180"
+    ],
+    "default": "90"
   }
 ]

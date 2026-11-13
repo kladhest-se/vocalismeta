@@ -61,7 +61,7 @@ if (( EUID != 0 )); then
   exit 1
 fi
 
-for command_name in awk chown date git grep id mktemp mv python3 sleep systemctl tail; do
+for command_name in awk chown date git grep id mkdir mktemp mv python3 rm rmdir sleep systemctl tail; do
   command -v "$command_name" >/dev/null || {
     echo "$command_name is required" >&2
     exit 1

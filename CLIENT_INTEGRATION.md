@@ -25,7 +25,8 @@ The normative machine-readable files are:
 - [`client-contract/metadata-contract-v3.json`](client-contract/metadata-contract-v3.json)
 - [`client-contract/test-vectors-v3.json`](client-contract/test-vectors-v3.json)
 
-VocalisMeta executes every published vector in its own test suite. Client
+VocalisMeta executes every published vector in its own test suite (run
+`python3 -m unittest discover -s tests -v`; see [DEVELOPMENT.md](DEVELOPMENT.md)). Client
 projects should run the same vectors in CI. The JSON contract is build-time
 integration data; it is not a Plex service endpoint and is not written into
 user-visible metadata.

@@ -6,6 +6,10 @@ service.
 
 Current release: **v0.1.0**
 
+This source tree contains **0.1.1 development changes**. The stable install
+command below selects v0.1.0; use the developer channel for changes merged to
+main, or deploy a reviewed local bundle to a test server.
+
 For the best listening experience, use VocalisMeta with
 [VocalisBook](https://vocalisbook.kladhest.se) for macOS, iPhone, iPad, and
 Apple TV.
@@ -21,6 +25,9 @@ Apple TV.
 - Stable audiobook, work, and contributor identities for Plex clients
 - Embedded ASIN, region, ISBN, LibriVox ID, series, and contributor tags
 - Local, embedded, and provider cover artwork with validation and fallback
+- Per-book JSON overrides for identity, metadata, and local artwork
+- Persistent Swedish recording selections and readable match diagnostics
+- Bounded provider searches with temporary outage backoff
 - Multi-part audiobook scanning and edition-aware matching
 - Configurable retries, provider priority, artwork preference, and JSON settings
 - Versioned player contracts and test vectors:
@@ -29,6 +36,10 @@ Apple TV.
   and [v3](client-contract/metadata-contract-v3.json) / [tests](client-contract/test-vectors-v3.json)
 
 ## Install on Linux
+
+Requires a Linux/systemd Plex installation with legacy music-agent support,
+Bash, Git, Python 3, and the standard tools listed in
+[installation and recovery](OPERATIONS.md). The installer restarts Plex.
 
 The installer downloads VocalisMeta, validates it, replaces the existing bundle,
 restarts Plex, checks the plug-in log, and restores the previous installation if
@@ -73,3 +84,12 @@ VocalisMeta reads Ljudboksarkivet's public sitemap and structured audiobook
 metadata, then stores the accepted result in Plex. Audiobook players still talk
 only to Plex; no companion service or Ljudboksarkivet client integration is
 required.
+
+## Configuration and maintenance
+
+- [Per-book overrides, saved recordings, and match diagnostics](BOOK_METADATA.md)
+- [Source uploads and tagged releases](docs/RELEASING.md)
+- [Configuration reference](CONFIGURATION.md) and [example JSON](config.example.json)
+- [Requirements, troubleshooting, backup restore, and uninstall](OPERATIONS.md)
+- [Development checks and testing limits](DEVELOPMENT.md)
+- [Audiobook-player integration](CLIENT_INTEGRATION.md)

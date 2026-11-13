@@ -13,8 +13,10 @@ BOOK_PATH = '/ljudbok/'
 
 try:
     text_type = unicode
+    unicode_character = unichr
 except NameError:  # pragma: no cover - Python 3 only
     text_type = str
+    unicode_character = chr
 
 
 def to_text(value):
@@ -28,6 +30,24 @@ def to_text(value):
         return text_type(value)
 
 
+def numeric_entity(match):
+    """Decode Unicode scalar values on both narrow and wide Python 2 builds."""
+    try:
+        point = int(match.group(1) or match.group(2),
+                    16 if match.group(1) else 10)
+    except ValueError:
+        return '\ufffd'
+    if point == 0 or point > 0x10ffff or 0xd800 <= point <= 0xdfff:
+        return '\ufffd'
+    try:
+        return unicode_character(point)
+    except ValueError:
+        # A narrow Python 2 build needs a surrogate pair for non-BMP text.
+        point = point - 0x10000
+        return (unicode_character(0xd800 + (point >> 10))
+                + unicode_character(0xdc00 + (point & 0x3ff)))
+
+
 def decode_entities(value):
     value = to_text(value)
     replacements = (
@@ -38,10 +58,7 @@ def decode_entities(value):
         value = value.replace(source, target)
     return re.sub(
         r'&#(?:x([0-9a-fA-F]+)|([0-9]+));',
-        lambda match: text_type(chr(int(
-            match.group(1) or match.group(2),
-            16 if match.group(1) else 10,
-        ))),
+        numeric_entity,
         value,
     )
 

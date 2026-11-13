@@ -2,7 +2,35 @@
 
 ## 0.1.1 - Unreleased
 
+### Fixed
+
+- Decode numeric HTML entities with Unicode characters on Python 2.7, including
+  narrow builds; replace invalid scalar values without aborting provider parsing.
+- Add a standalone Python 2.7/3 Unicode regression suite and a checklist for
+  deferred live Plex validation.
+
+- Prevent automatic title matches when known author evidence conflicts, across
+  Audible and providers using the shared scorer; retain manual suggestions.
+- Preserve valid work relationships when a forced enrichment refresh fails;
+  replace them after an accepted lookup and still remove implausible work data.
+- Replace supplied contributor namespaces rather than accumulating stale people,
+  and discard a previous rating count when the rating source changes.
+- Expire the Swedish catalogue index after one week, retry partial loads, and
+  retain a complete index during reload failures.
+- Recover clean album titles from Ljudboksarkivet presentation labels when a
+  repeated lookup is unavailable.
+- Add offline regression tests, execution of all v1/v2/v3 contract vectors,
+  automated checks, a validated config example, and operator documentation.
+
 ### Added
+
+- Strict optional vocalismeta.json identity, metadata, and local artwork overrides.
+- Persistent per-book Swedish provider locators without changing portable IDs.
+- Candidate evidence logs and an offline readable/JSON diagnostic report tool.
+- Per-search HTTP attempt/deadline limits and 60-second provider outage backoff.
+- Adapted ZIFburn/BitSkim release workflow for source uploads, bundle packaging,
+  annotated tags, GitLab/GitHub releases, checksum verification, and resuming uploads.
+  Release configuration remains external; no release was published by integration.
 
 - Ko-fi support links on the public VocalisMeta website and GitHub README.
 - Simplified Catppuccin Mocha-inspired public website with clearer typography,

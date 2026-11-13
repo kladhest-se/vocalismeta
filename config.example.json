@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "audible": {
+    "region": "us",
+    "fallback_regions": [
+      "uk"
+    ],
+    "maximum_results": 20,
+    "exclude_preorders": true,
+    "include_adult": false,
+    "api_base_url": ""
+  },
+  "providers": {
+    "librivox": {
+      "enabled": false,
+      "mode": "fallback"
+    },
+    "ljudboksarkivet": {
+      "enabled": false,
+      "mode": "fallback"
+    },
+    "open_library": {
+      "enabled": true
+    },
+    "google_books": {
+      "enabled": false
+    },
+    "enrichment_priority": "openlibrary_first",
+    "request_budget": 8
+  },
+  "metadata": {
+    "include_subtitle": true,
+    "simplify_title": false,
+    "keep_existing_genres": false,
+    "authors_as_moods": true,
+    "series_as_moods": true,
+    "embedded_series_fallback": true,
+    "embedded_contributor_fallback": true,
+    "author_genres": true,
+    "work_identity_as_mood": true,
+    "extended_player_metadata": true
+  },
+  "artwork": {
+    "preference": "local_first",
+    "requested_size": 2000
+  },
+  "network": {
+    "attempts": 3,
+    "timeout_seconds": 45,
+    "search_request_budget": 24,
+    "search_timeout_seconds": 90
+  },
+  "logging": {
+    "level": "INFO"
+  }
+}

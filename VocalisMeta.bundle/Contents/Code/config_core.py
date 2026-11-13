@@ -312,7 +312,7 @@ def load_config_file(path):
 
     if 'network' in document:
         network = require_object(document['network'], 'network', (
-            'attempts', 'timeout_seconds',
+            'attempts', 'timeout_seconds', 'search_request_budget', 'search_timeout_seconds',
         ))
         if 'attempts' in network:
             values['request_retries'] = require_integer(
@@ -322,6 +322,13 @@ def load_config_file(path):
             values['request_timeout'] = require_integer(
                 network['timeout_seconds'], 'network.timeout_seconds', 10, 120
             )
+
+        if 'search_request_budget' in network:
+            values['search_request_budget'] = require_integer(
+                network['search_request_budget'], 'network.search_request_budget', choices=(12, 24, 48))
+        if 'search_timeout_seconds' in network:
+            values['search_timeout'] = require_integer(
+                network['search_timeout_seconds'], 'network.search_timeout_seconds', choices=(30, 60, 90, 180))
 
     if 'logging' in document:
         logging = require_object(document['logging'], 'logging', ('level',))

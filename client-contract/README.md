@@ -45,6 +45,9 @@ partial provider refresh, VocalisMeta preserves a previously valid
 relationship namespace when the current response omits that namespace. Fresh
 non-empty values replace the previous namespace.
 
-VocalisMeta's own tests execute every published vector. A player such as
+VocalisMeta's own tests execute every published vector; run
+`python3 -m unittest discover -s tests -v` from the repository root. See
+[development instructions](../DEVELOPMENT.md) for coverage and limitations.
+A player such as
 [VocalisBook](https://github.com/kladhest-se/vocalisbook) should run the same
 vectors in its CI so agent and client changes cannot drift apart unnoticed.

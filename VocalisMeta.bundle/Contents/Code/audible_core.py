@@ -701,6 +701,10 @@ def score_product(wanted_title, wanted_author, wanted_language, product, rank=0,
     )
     score = score - presentation_mismatch_penalty(wanted_title, product)
     score = score - (min(int(rank), 9) * 0.35)
+    # Conflicting or absent provider authors cannot establish an automatic
+    # match. Keep the result available below the automatic threshold for Fix Match.
+    if wanted_author and author_ratio(wanted_author, product) < 0.55:
+        score = min(score, 79)
     return max(0, min(100, int(round(score))))
 
 
