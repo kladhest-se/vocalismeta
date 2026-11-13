@@ -278,5 +278,17 @@
       "180"
     ],
     "default": "90"
+  },
+  {
+    "id": "preview_updates",
+    "label": "Preview album updates without changing metadata (report in agent log)",
+    "type": "bool",
+    "default": "false"
+  },
+  {
+    "id": "metadata_reports",
+    "label": "Record album metadata snapshots for offline export (agent log)",
+    "type": "bool",
+    "default": "false"
   }
 ]

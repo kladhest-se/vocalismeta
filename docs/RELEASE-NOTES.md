@@ -5,7 +5,9 @@
 - Optional per-book identity, metadata, and artwork overrides.
 - Persistent selection of Swedish recordings without changing client identities.
 - Match diagnostics, search budgets, and temporary provider outage backoff.
-- Offline regression coverage and operator documentation.
+- Metadata change previews, local doctor, validated metadata export, and multipart conflict detection.
+- Stronger artwork checks with optional real decoding.
+- Offline provider fixtures, installer lifecycle/rollback tests, and operator documentation.
 - Integrated source push and verified tagged-release tooling for GitLab/GitHub.
 
 Live Plex validation remains deferred. This is a prepared development release;

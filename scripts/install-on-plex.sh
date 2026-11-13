@@ -99,7 +99,9 @@ restore_previous_install() {
     old_install_moved=false
   fi
   if [[ "$service_stopped" == true ]]; then
-    systemctl start "$service_name" >/dev/null 2>&1 || true
+    if ! systemctl start "$service_name" >/dev/null 2>&1; then
+      echo "Rollback restored files but could not restart $service_name; start the service manually." >&2
+    fi
     service_stopped=false
   fi
 }
@@ -114,6 +116,9 @@ cleanup() {
   exit "$status"
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
 
 if [[ "$mode" == 'release' ]]; then
   echo "Downloading VocalisMeta release $release_version"

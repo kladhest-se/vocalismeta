@@ -25,6 +25,8 @@ Apple TV.
 - Stable audiobook, work, and contributor identities for Plex clients
 - Embedded ASIN, region, ISBN, LibriVox ID, series, and contributor tags
 - Local, embedded, and provider cover artwork with validation and fallback
+- Offline doctor, metadata change previews, and portable metadata export
+- Multipart conflict detection and stronger artwork validation
 - Per-book JSON overrides for identity, metadata, and local artwork
 - Persistent Swedish recording selections and readable match diagnostics
 - Bounded provider searches with temporary outage backoff

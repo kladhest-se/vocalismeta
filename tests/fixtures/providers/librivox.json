@@ -1,0 +1,56 @@
+{
+  "normal": {
+    "books": [
+      {
+        "id": "123",
+        "title": "Fixture Book",
+        "authors": [
+          {
+            "id": "1",
+            "first_name": "Fixture",
+            "last_name": "Author"
+          }
+        ],
+        "language": "English",
+        "totaltime": "02:00:00",
+        "sections": [
+          {
+            "readers": [
+              {
+                "reader_id": "2",
+                "display_name": "Fixture Reader"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "partial": {
+    "books": [
+      {
+        "id": "123",
+        "title": "Fixture Book"
+      }
+    ]
+  },
+  "malformed": [
+    null,
+    [],
+    {
+      "books": {}
+    },
+    {
+      "books": [
+        null,
+        {
+          "id": {}
+        },
+        {
+          "id": "bad",
+          "title": "X"
+        }
+      ]
+    }
+  ]
+}

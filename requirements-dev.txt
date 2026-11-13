@@ -1,0 +1,3 @@
+# Optional for real JPEG/PNG/WebP decode tests and offline doctor --artwork.
+# The legacy Plex bundle uses its installed PIL when available, not this environment.
+Pillow>=11.3

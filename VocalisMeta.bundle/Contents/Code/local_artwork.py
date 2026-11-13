@@ -7,6 +7,7 @@ import hashlib
 import io
 import os
 import re
+from artwork_core import inspect_image
 
 
 MAX_COVER_BYTES = 32 * 1024 * 1024
@@ -30,10 +31,12 @@ def inspect_cover(path):
         if size <= 0 or size > MAX_COVER_BYTES:
             return None
         with io.open(path, 'rb') as handle:
-            mime_type = image_type(handle.read(16))
-        if not mime_type:
+            data = handle.read(MAX_COVER_BYTES + 1)
+        info = inspect_image(data)
+        if not info:
             return None
-        return {'path': path, 'mime_type': mime_type, 'size': size}
+        info.update({'path': path, 'size': len(data)})
+        return info
     except (IOError, OSError):
         return None
 
@@ -68,17 +71,17 @@ def read_cover(cover):
         return None
     embedded = cover.get('data')
     if embedded is not None:
-        if 0 < len(embedded) <= MAX_COVER_BYTES and image_type(embedded[:16]):
+        if 0 < len(embedded) <= MAX_COVER_BYTES and inspect_image(embedded):
             return embedded
         return None
     if not cover.get('path'):
         return None
-    checked = inspect_cover(cover['path'])
-    if not checked:
-        return None
     try:
-        with io.open(checked['path'], 'rb') as handle:
-            return handle.read(checked['size'])
+        if os.path.getsize(cover['path']) > MAX_COVER_BYTES:
+            return None
+        with io.open(cover['path'], 'rb') as handle:
+            data = handle.read(MAX_COVER_BYTES + 1)
+        return data if inspect_image(data) else None
     except (IOError, OSError):
         return None
 

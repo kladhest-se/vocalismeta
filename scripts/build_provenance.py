@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOTS = ('.gitignore', 'LICENSE', 'Makefile', 'README.md', 'CHANGELOG.md',
                 'CLIENT_INTEGRATION.md', 'CONFIGURATION.md', 'DEVELOPMENT.md',
                 'OPERATIONS.md', 'PLEX_VALIDATION.md', 'REPAIR_NOTES.md', 'BOOK_METADATA.md',
-                'config.example.json', 'VocalisMeta.bundle', 'client-contract',
+                'config.example.json', 'requirements-dev.txt', 'VocalisMeta.bundle', 'client-contract',
                 'tests', 'public-web', 'scripts', 'examples', 'docs', '.github')
 REQUIRED = ('LICENSE', 'Makefile', 'VocalisMeta.bundle/Contents/Info.plist',
             'VocalisMeta.bundle/Contents/Code/__init__.py', 'tests', 'scripts', 'public-web')

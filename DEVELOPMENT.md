@@ -1,7 +1,8 @@
 # Development and verification
 
-Run from the repository root with Python 3.9+ and Bash; no third-party Python
-dependencies, live provider credentials, or Plex server are required:
+Run from the repository root with Python 3.9+ and Bash; no live provider credentials or Plex server are required. Install
+`requirements-dev.txt` in a virtual environment for full image-decoder tests;
+without it those cases skip explicitly and structural fallback tests still run:
 
 ```bash
 python3 -m unittest discover -s tests -v
@@ -51,3 +52,24 @@ and ambiguity, retry/time budgets, thread isolation, provider cooldowns, diagnos
 report rendering, and the adapted release workflow with mocked GitLab/GitHub APIs.
 Release tooling and its dependencies live in `scripts/`; bundle code remains
 Python 2.7-compatible. See [release instructions](docs/RELEASING.md).
+
+
+## Provider, installer, preview, and artwork regression coverage
+
+`tests/fixtures/providers` holds synthetic normal/partial/malformed catalogue
+responses. These are offline schema examples, not live service captures. Installer
+lifecycle tests execute a disposable copy of the script with fake Git/service/
+ownership/move/sleep commands. Only the test copy removes the root gate; production
+still requires root. All file changes occur in temporary test directories, and
+no real service or remote repository is touched. Tests cover success, exact-tag
+installation, startup/registration failures, initial installs, permission and move
+errors, SIGTERM rollback, and failure to restart after restoration. SIGKILL, power
+loss, real systemd, and real Plex startup remain outside this harness.
+
+Preview tests verify scalar/list/poster isolation, suppressed persistent selection
+writes, and exception cleanup. CLI tests validate reports/export through the real
+sidecar loader, overwrite protection, XML boundaries, and config-secret redaction.
+Artwork tests include corrupt/truncated fixtures, dimensions/aspect limits, real
+JPEG/PNG/WebP decoding when Pillow is installed, and explicit no-decoder fallback.
+See [Pillow's image API](https://pillow.readthedocs.io/en/stable/reference/Image.html)
+for the verify/reopen/load lifecycle.

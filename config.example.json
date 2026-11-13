@@ -38,7 +38,9 @@
     "embedded_contributor_fallback": true,
     "author_genres": true,
     "work_identity_as_mood": true,
-    "extended_player_metadata": true
+    "extended_player_metadata": true,
+    "preview_updates": false,
+    "reports": false
   },
   "artwork": {
     "preference": "local_first",

@@ -1,0 +1,51 @@
+{
+  "normal": {
+    "products": [
+      {
+        "asin": "B000000001",
+        "title": "Fixture Book",
+        "authors": [
+          {
+            "name": "Fixture Author"
+          }
+        ],
+        "narrators": [
+          {
+            "name": "Fixture Reader"
+          }
+        ],
+        "language": "english",
+        "runtime_length_min": 120,
+        "release_date": "2020-01-01"
+      }
+    ]
+  },
+  "partial": {
+    "products": [
+      {
+        "asin": "B000000001",
+        "title": "Fixture Book"
+      }
+    ]
+  },
+  "malformed": [
+    null,
+    [],
+    {
+      "products": {}
+    },
+    {
+      "products": [
+        null,
+        {
+          "asin": "bad",
+          "title": "X"
+        },
+        {
+          "asin": "B000000001",
+          "title": []
+        }
+      ]
+    }
+  ]
+}

@@ -10,6 +10,7 @@ import os
 import struct
 
 from local_artwork import MAX_COVER_BYTES, image_type
+from artwork_core import inspect_image
 
 
 MAX_ENCODED_COVER_BYTES = ((MAX_COVER_BYTES + 2) // 3) * 4 + 4096
@@ -36,12 +37,14 @@ def synchsafe(raw):
 def valid_cover(data, source, path):
     if not data or len(data) > MAX_COVER_BYTES:
         return None
-    mime_type = image_type(data[:16])
-    if not mime_type:
+    checked = inspect_image(data)
+    if not checked:
         return None
     return {
         'data': data,
-        'mime_type': mime_type,
+        'mime_type': checked['mime_type'],
+        'width': checked['width'], 'height': checked['height'],
+        'decoded': checked['decoded'],
         'path': path,
         'size': len(data),
         'source': source,

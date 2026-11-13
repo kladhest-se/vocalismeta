@@ -26,3 +26,13 @@ requests/time, provider outage backoff, and the adapted ZIFburn/BitSkim release
 workflow. External release settings are kept outside public source. See
 [BOOK_METADATA.md](BOOK_METADATA.md) and [docs/RELEASING.md](docs/RELEASING.md).
 Real Plex tests remain deferred by request; no repository publication occurred.
+
+
+The next reliability pass adds all seven requested improvements: provider fixtures,
+offline installer rollback tests, metadata previews, doctor, multipart conflict
+detection, portable export, and artwork validation. Details and usage are in
+BOOK_METADATA.md. No real Plex validation, repository push, or release publication
+is performed by these changes.
+
+This pass is validated with 141 offline tests in a Pillow-enabled test environment;
+Bash and PHP syntax checks also pass. Live Plex checks remain deferred.

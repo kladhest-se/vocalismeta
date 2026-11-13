@@ -119,6 +119,9 @@ from openlibrary_core import (
 from request_tools import RequestBudget, backoff_seconds, should_retry, status_from_error
 from sidecar_core import load_sidecar
 import search_runtime
+from multipart_core import conflicts as multipart_conflicts
+from metadata_tools_core import Draft, snapshot, changes
+from artwork_core import inspect_image
 from config_core import ConfigError, file_signature, load_config_file
 from identity_core import book_identity, split_book_identity
 from client_metadata_core import (
@@ -721,8 +724,10 @@ def embedded_identity_from_paths(paths):
         'series': None, 'series_sequence': None,
     }
     formats = []
+    part_records = []
     for path in paths:
         identity = read_embedded_metadata(path)
+        part_records.append((path, identity))
         if identity.get('format') and identity.get('format') not in formats:
             formats.append(identity.get('format'))
         if not combined['asin'] and identity.get('asin'):
@@ -748,7 +753,19 @@ def embedded_identity_from_paths(paths):
             combined['series'] = identity.get('series')
         if not combined['series_sequence'] and identity.get('series_sequence'):
             combined['series_sequence'] = identity.get('series_sequence')
+    detected = multipart_conflicts(part_records)
     overrides = search_runtime.sidecar().get('metadata', {})
+    unresolved = []
+    for conflict in detected:
+        field = conflict['field']
+        if field in overrides or (field == 'series_sequence' and 'series' in overrides):
+            continue
+        unresolved.append(conflict)
+        if field in combined:
+            combined[field] = [] if field == 'isbns' else None
+        log('WARN', 'MULTIPART_CONFLICT field=%s evidence=%s', field,
+            json.dumps(conflict['evidence'], ensure_ascii=True, sort_keys=True))
+    combined['conflicts'] = unresolved
     for key in ('authors', 'narrators', 'language', 'abridged'):
         if key in overrides:
             combined[key] = overrides[key]
@@ -1410,7 +1427,7 @@ def add_remote_poster(metadata, image_urls, sort_order):
                     body = response.content
                 except AttributeError:
                     body = response
-                if not body or len(body) > MAX_COVER_BYTES or not image_type(body[:16]):
+                if not inspect_image(body):
                     raise ValueError('response was not a supported image')
                 metadata.posters[image_url] = Proxy.Media(body, sort_order=sort_order)
                 return image_url
@@ -2196,13 +2213,36 @@ def bounded_book_search(function):
 def book_update_overrides(function):
     def run(self, metadata, media, lang, force):
         previous = search_runtime.sidecar()
-        search_runtime.CONTEXT.sidecar = read_book_sidecar(media)
+        previous_preview = search_runtime.preview()
         try:
-            result = function(self, metadata, media, lang, force)
-            apply_book_sidecar(metadata)
+            previous_locator = search_runtime.CONTEXT.preview_locator
+        except AttributeError:
+            previous_locator = None
+        search_runtime.CONTEXT.preview_locator = None
+        preview = as_bool(pref('preview_updates', False))
+        reporting = preview or as_bool(pref('metadata_reports', False))
+        search_runtime.CONTEXT.sidecar = read_book_sidecar(media)
+        search_runtime.CONTEXT.preview = preview
+        try:
+            before = snapshot(metadata) if reporting else None
+            target = Draft(metadata) if preview else metadata
+            result = function(self, target, media, lang, force)
+            apply_book_sidecar(target)
+            if reporting:
+                after = snapshot(target)
+                key = selection_key(media, to_text(target.id))
+                entry = selection_read(key)
+                locator = search_runtime.CONTEXT.preview_locator or entry.get('selected')
+                if locator:
+                    after['ljudboksarkivet_slug'] = locator
+                report = {'schema_version': 1, 'preview': preview, 'before': before,
+                          'after': after, 'changes': changes(before, after)}
+                log('INFO', 'METADATA_REPORT %s', json.dumps(report, ensure_ascii=True, sort_keys=True))
             return result
         finally:
             search_runtime.CONTEXT.sidecar = previous
+            search_runtime.CONTEXT.preview = previous_preview
+            search_runtime.CONTEXT.preview_locator = previous_locator
     return run
 
 
@@ -2252,6 +2292,8 @@ def selection_read(key):
 def selection_write(key, value):
     if not key:
         return
+    if search_runtime.preview():
+        return
     try:
         Dict[key] = value
         Dict.Save()
@@ -2276,6 +2318,9 @@ def remember_ljudboksarkivet_candidates(media, ranked):
 
 def save_ljudboksarkivet_selection(media, identifier, book):
     slug = book.get('_vocalismeta_slug')
+    if search_runtime.preview():
+        search_runtime.CONTEXT.preview_locator = slug
+        return
     if not slug:
         return
     selection_write(selection_key(media, identifier), {'selected': slug,
@@ -2539,6 +2584,10 @@ class VocalisMetaAlbum(Agent.Album):
             return
 
         embedded = embedded_identity_from_paths(file_paths)
+        if embedded.get('conflicts') and not manual:
+            log_album_search_summary('skipped', title, author,
+                reason='conflicting_multipart_tags', author_source=author_source)
+            return
         parent_guid = media_parent_guid(media)
         parent_author = author_name_from_guid(parent_guid)
         if not parent_author and (not author or author in UNKNOWN_VALUES):

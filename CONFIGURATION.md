@@ -38,7 +38,7 @@ numbers must be integers, not quoted strings. File size is limited to 1 MiB.
 | `providers.open_library` | `enabled`: boolean |
 | `providers.google_books` | `enabled`: boolean; `api_key_file`: non-empty path to a UTF-8 secret file |
 | `providers` | `enrichment_priority`: `openlibrary_first` or `googlebooks_first`; `request_budget`: 2, 4, 6, 8, 12 logical enrichment requests per refresh (retries are additional attempts) |
-| `metadata` | Boolean keys: `include_subtitle`, `simplify_title`, `keep_existing_genres`, `authors_as_moods`, `series_as_moods`, `embedded_series_fallback`, `embedded_contributor_fallback`, `author_genres`, `work_identity_as_mood`, `extended_player_metadata` |
+| `metadata` | Boolean keys: `include_subtitle`, `simplify_title`, `keep_existing_genres`, `authors_as_moods`, `series_as_moods`, `embedded_series_fallback`, `embedded_contributor_fallback`, `author_genres`, `work_identity_as_mood`, `extended_player_metadata`, `preview_updates`, `reports` |
 | `artwork` | `preference`: `local_first`, `audible_first`, `local_only`, `audible_only`; `requested_size`: 500, 1000, 2000, 3000 |
 | `network` | `attempts`: 1–5 total attempts, including the first; `timeout_seconds`: 10–120 per attempt; `search_request_budget`: 12, 24, 48 total search attempts; `search_timeout_seconds`: 30, 60, 90, 180 |
 | `logging` | `level`: `DEBUG`, `INFO`, `WARN`, `ERROR` |
@@ -69,3 +69,6 @@ does not. See [OPERATIONS.md](OPERATIONS.md) for logs and recovery.
 Per-book overrides are separate from this agent settings schema: see
 [BOOK_METADATA.md](BOOK_METADATA.md). Search limits default to 24 attempts /
 90 seconds; enrichment has its own request budget.
+
+`metadata.preview_updates` and `metadata.reports` default to false. See
+[previews and export](BOOK_METADATA.md) before enabling snapshot logging.

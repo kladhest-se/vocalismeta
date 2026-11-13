@@ -159,7 +159,8 @@ class Sidecars(unittest.TestCase):
         self.assertTrue(self.g['sidecar_search_result'](None, None, 'Book', 'Author', 'en'))
 
     def test_valid_local_cover(self):
-        (self.folder / 'cover.jpg').write_bytes(b'\xff\xd8\xff' + b'\x00' * 20)
+        import base64
+        (self.folder / 'cover.jpg').write_bytes(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='))
         loaded = self.load({'schema_version': 1, 'artwork': {'file': 'cover.jpg'}})
         self.assertEqual(loaded['cover'], str((self.folder / 'cover.jpg').resolve()))
 

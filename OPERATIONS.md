@@ -72,7 +72,7 @@ bundle as described below.
 
 If installation fails, read the printed error and agent log. The installer checks
 service activation and agent registration, not whether every provider works.
-Rollback is attempted automatically on startup failure; verify Plex is running
+Rollback is attempted automatically on startup failure or catchable interruption; verify Plex is running
 afterward. If automatic rollback cannot restore service, follow the manual
 procedure below.
 
@@ -118,3 +118,10 @@ configuration environment setting and its secret files only if they are no
 longer needed. Existing metadata can remain in Plex until a subsequent refresh;
 uninstalling the bundle does not restore earlier field values. Retained installer
 backups may be deleted individually after you no longer need recovery.
+
+
+Offline validation and preview/export commands are documented in
+[BOOK_METADATA.md](BOOK_METADATA.md). Rollback failures now explicitly report when
+files were restored but the service could not be restarted; inspect the service
+and start it manually. SIGKILL/power loss cannot be handled by shell traps, so keep
+the printed backup path and independent Plex backups.

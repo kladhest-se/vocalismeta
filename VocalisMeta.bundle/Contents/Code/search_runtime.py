@@ -78,3 +78,10 @@ def pause(seconds):
         seconds = min(seconds, max(0, active.deadline - active.clock()))
     if seconds:
         time.sleep(seconds)
+
+
+def preview():
+    try:
+        return CONTEXT.preview
+    except AttributeError:
+        return False

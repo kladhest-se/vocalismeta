@@ -24,6 +24,14 @@
 
 ### Added
 
+- Synthetic provider response fixtures for normal, partial, and malformed payloads.
+- Offline installer lifecycle tests and rollback on catchable interruption, with
+  explicit reporting if the restored service cannot restart.
+- Isolated album metadata previews and optional snapshot reports for offline review.
+- Local doctor, snapshot comparison, report extraction, and validated per-book export.
+- Multipart tag conflict detection with safe automatic matching deferral.
+- Artwork structure, dimension, pixel/aspect checks and real PIL decoding when available.
+
 - Strict optional vocalismeta.json identity, metadata, and local artwork overrides.
 - Persistent per-book Swedish provider locators without changing portable IDs.
 - Candidate evidence logs and an offline readable/JSON diagnostic report tool.

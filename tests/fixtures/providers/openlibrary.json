@@ -1,0 +1,45 @@
+{
+  "normal": {
+    "docs": [
+      {
+        "key": "/works/OL123W",
+        "title": "Fixture Book",
+        "author_name": [
+          "Fixture Author"
+        ],
+        "author_key": [
+          "OL123A"
+        ],
+        "first_publish_year": 1900,
+        "isbn": [
+          "9780593135204"
+        ]
+      }
+    ]
+  },
+  "partial": {
+    "docs": [
+      {
+        "key": "/works/OL123W"
+      }
+    ]
+  },
+  "malformed": [
+    null,
+    [],
+    {
+      "docs": {}
+    },
+    {
+      "docs": [
+        null,
+        {
+          "key": "/books/OL1M"
+        },
+        {
+          "key": []
+        }
+      ]
+    }
+  ]
+}

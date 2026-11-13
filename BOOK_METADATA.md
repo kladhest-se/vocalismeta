@@ -63,7 +63,8 @@ catalogue rematching during refresh. To remove an identity override, remove the
 Artwork must be an existing supported image within the same book directory or a
 subdirectory; absolute paths, external URLs, and symlinks escaping the directory
 are rejected. Supported signatures are JPEG, PNG, and WebP, with the existing
-32 MiB artwork limit. Header validation does not prove the image fully decodes.
+32 MiB artwork limit. Images now have structure, dimension, pixel-count, and aspect checks. When PIL is
+available in the runtime, they are also verified and fully decoded; see below.
 
 For multipart books, one sidecar beside any part applies to the book. If several
 part directories contain sidecars, their validated contents must agree; conflicting
@@ -125,3 +126,115 @@ cooldown skips are recorded as provider failures, rather than evidence that a
 book does not exist. `SEARCH_BUDGET` records show attempts used and exhaustion.
 The existing enrichment request budget remains separate. Album refresh artwork
 and enrichment are not claimed to be bounded by this search-only deadline.
+
+
+## Local validation (`doctor`)
+
+The following commands only read local files. They do not contact Plex/providers,
+look up 1Password secrets, push source, or publish releases:
+
+```bash
+python3 scripts/vocalismeta.py doctor
+python3 scripts/vocalismeta.py doctor --config /etc/vocalismeta/config.json
+python3 scripts/vocalismeta.py doctor --book "/path/to/Author/Book" --artwork "/path/to/cover.jpg"
+python3 scripts/vocalismeta.py doctor --release-config "$HOME/Development/tools/git-release/projects/vocalismeta.json" --json
+```
+
+The doctor validates strict configuration/secret-file readability without printing
+secret contents, sidecar schema and artwork paths, multipart tag consistency,
+release destination/reference syntax, and requested image decoding. An unset token
+reference is a warning; remote access and 1Password resolution remain unverified.
+Errors return exit status 1; warnings alone return 0. Book directories are scanned
+for at most 256 audio files; give a single book, not a whole library. A directory
+containing only a sidecar can be validated before its audio is copied in.
+
+## Previewing updates
+
+Enable **Preview album updates without changing metadata** in agent settings, or
+set `metadata.preview_updates` to `true` in the main configuration. Then refresh an
+album. Provider lookups and local artwork reads still occur, but updates run on an
+isolated draft: scalar fields, genre/narrator/relationship lists, and poster keys
+are not written to the original metadata, and saved recording selections are not
+changed. Artist updates are outside this album-only preview mode.
+
+A single-line `METADATA_REPORT` JSON record in the agent log contains `before`,
+`after`, and a per-field `changes` map, including artwork key changes. Reports
+include titles, descriptions, and identities; keep logs private as appropriate.
+Extract the latest report (optionally filter by metadata identity):
+
+```bash
+python3 scripts/vocalismeta.py report --log "/path/to/agent.log" --output preview.json
+python3 scripts/vocalismeta.py preview --before before.json --after after.json
+```
+
+Review the report, disable preview mode, and refresh again to apply normal
+updates. That refresh fetches current evidence; it does not apply a frozen or
+approved report. Real Plex behavior and field locks remain deferred for live
+validation. The preview/report is not a backup of the Plex database.
+
+For export snapshots during ordinary applied updates, enable **Record album
+metadata snapshots for offline export**, or `metadata.reports: true`. Both
+settings default to false. A normal report records changes after applying them;
+only preview mode prevents album writes.
+
+## Portable export
+
+Export an extracted report, a metadata snapshot, or saved single-album Plex XML:
+
+```bash
+python3 scripts/vocalismeta.py export --input preview.json --output vocalismeta.json
+python3 scripts/vocalismeta.py export --input album.xml --output vocalismeta.json
+```
+
+The exporter runs the production sidecar validator before writing, refuses to
+replace an existing file unless `--overwrite` is given, and supports `--output -`
+for review on stdout. Copy the reviewed file beside the intended book's audio;
+export itself does not modify a library. XML must contain exactly one album.
+XML entity declarations are rejected. Input files/logs are limited to 32 MiB;
+trim a large log to the relevant refresh before extracting a report.
+
+Export includes supported title, summary, publisher/date, author/narrator names,
+genres, series/sequence, language/edition, and a supported provider identity when
+available. Saved Swedish locators are retained in agent reports. Source-only
+local fingerprint IDs are exported as `provider: local`, so they are recomputed
+from the destination book's evidence; they are not force-assigned identifiers.
+Unknown author relationships are omitted rather than guessed. A saved XML's album
+artist supplies the author only when no author Mood is available. Artwork URLs,
+image bytes, ratings, progress, bookmarks, field locks, Work-ID, and unsupported
+provider details are not exported. Inspect provider IDs before using Fix Match.
+
+## Multipart conflicts
+
+Different nonempty ASINs, regions, LibriVox IDs, ISBN evidence, language, edition,
+series names, or series positions produce `MULTIPART_CONFLICT` log records.
+Missing values are unknown rather than conflicts. ISBN-10/13 equivalents and
+common language aliases are normalized; overlapping ISBN lists are compatible.
+Contradictory embedded values are cleared from combined matching evidence.
+Automatic matching stops until the files are reviewed. Manual matching remains
+available with warnings; an explicit sidecar identity is authoritative. Explicit
+sidecar language/series/edition overrides resolve their corresponding conflicts.
+This detects inconsistent tags, not acoustic differences or missing chapters.
+
+## Artwork verification
+
+All incoming local, embedded, and remote candidates receive bounded structural
+checks and dimensions. Limits are 32 MiB encoded, 10,000 pixels per axis,
+25 million pixels total, and width/height from 0.33 to 3.0. Extreme banners are
+rejected; images below 200 pixels on either axis are reported by the doctor as
+low resolution. Animated WebP is not accepted as cover art.
+
+When PIL/Pillow is available, `verify()` and a fresh `load()` reject corrupt
+compressed image data. Full offline decoding can be enabled in an isolated
+Python environment:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python scripts/vocalismeta.py doctor --artwork cover.jpg
+```
+
+The Plex bundle does not install packages into the server; it uses its installed
+PIL if available. Without a decoder, PNG checks include CRC/decompression/filter
+structure, while JPEG/WebP receive container/dimension checks only. Such a result
+is explicitly marked `decoded: false`; it is not proof of full image decoding.
+`doctor --artwork` requires a decoder and returns an error if unavailable.
