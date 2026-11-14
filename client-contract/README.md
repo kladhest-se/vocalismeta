@@ -51,3 +51,11 @@ VocalisMeta's own tests execute every published vector; run
 A player such as
 [VocalisBook](https://github.com/kladhest-se/vocalisbook) should run the same
 vectors in its CI so agent and client changes cannot drift apart unnoticed.
+
+
+Additional compatibility vectors are in
+[`unicode-identity-vectors-v1.json`](unicode-identity-vectors-v1.json). They freeze
+raw Unicode-scalar fingerprints, normalized narrator-name fingerprints, and local
+book examples. Run `python3 tests/test_unicode_identities.py` (or Python 2.7) from
+the repository root. These vectors supplement the existing v1/v2/v3 contracts;
+they do not change the provider-ID, recording key, or progress-owner formats.

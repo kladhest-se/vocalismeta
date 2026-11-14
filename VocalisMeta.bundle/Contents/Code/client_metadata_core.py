@@ -4,6 +4,7 @@
 from __future__ import unicode_literals
 
 import re
+from unicode_identity_core import fingerprint
 
 try:
     text_type = unicode
@@ -49,12 +50,7 @@ def name_fingerprint(value):
     value = clean_name(value).lower()
     if not value:
         return ''
-    checksum = 14695981039346656037
-    modulus = 18446744073709551616
-    for index in range(len(value)):
-        checksum = checksum ^ ord(value[index])
-        checksum = (checksum * 1099511628211) % modulus
-    return '%016x' % checksum
+    return fingerprint(value)
 
 
 def person_name(record):

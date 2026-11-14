@@ -19,6 +19,7 @@ from audible_core import (
     valid_asin,
 )
 from openlibrary_core import equivalent_isbns
+from unicode_identity_core import fingerprint
 
 
 LIBRIVOX_ID_RE = re.compile(r'^librivox:([1-9][0-9]{0,9})$', re.I)
@@ -52,13 +53,7 @@ def duration_bucket(value):
 
 def stable_fingerprint(value):
     """Return a deterministic 64-bit FNV-1a fingerprint."""
-    text = to_text(value)
-    checksum = 14695981039346656037
-    modulus = 18446744073709551616
-    for index in range(len(text)):
-        checksum = checksum ^ ord(text[index])
-        checksum = (checksum * 1099511628211) % modulus
-    return '%016x' % checksum
+    return fingerprint(to_text(value))
 
 
 def local_identity(title, author, duration_minutes=None, language='', abridged=None):

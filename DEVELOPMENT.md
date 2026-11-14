@@ -18,9 +18,10 @@ and recovery of provider presentation labels. The example config is validated
 by the production loader. Tests run the installer's embedded source compatibility
 checks without running its root/service operations.
 
-The harness injects small AgentKit substitutes so actual agent helpers and update
+The agent harness injects small AgentKit substitutes so actual helpers and update
 code can run offline. It does not simulate Plex's complete model, field locks,
-sandbox, networking cache, Python 2 interpreter, or service lifecycle. Keep bundle
+sandbox, networking cache, or Python 2 interpreter. A separate installer harness
+simulates service commands and lifecycle failures; it does not run real systemd. Keep bundle
 code Python 2.7 compatible even though the test runner uses Python 3. Before a
 release, test agent startup, search, metadata refresh, locked fields, multipart
 books, and installer upgrade/rollback on a real supported Plex deployment.
@@ -73,3 +74,18 @@ Artwork tests include corrupt/truncated fixtures, dimensions/aspect limits, real
 JPEG/PNG/WebP decoding when Pillow is installed, and explicit no-decoder fallback.
 See [Pillow's image API](https://pillow.readthedocs.io/en/stable/reference/Image.html)
 for the verify/reopen/load lifecycle.
+
+
+## Unicode identities and artwork observations
+
+`client-contract/unicode-identity-vectors-v1.json` supplies fixed raw fingerprint,
+narrator-name, and local-book cases for accents, combining marks, Swedish/CJK
+names, and emoji. `python3 tests/test_unicode_identities.py` runs them without
+Plex or third-party packages; the file also supports Python 2.7. Tests simulate
+UTF-16 surrogate storage as well as native strings. This is not a claim of
+execution on an actual Python 2 interpreter or every historical Unicode table.
+
+Artwork report tests cover identical/changed bytes under the same poster key,
+unknown baselines, failed candidates, remote URLs, preview isolation, and tracking
+context cleanup. Stored hashes describe bytes last supplied by the agent, not a
+read-back of the Plex database or proof that the server accepted a locked field.

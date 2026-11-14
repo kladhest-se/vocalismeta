@@ -122,6 +122,7 @@ import search_runtime
 from multipart_core import conflicts as multipart_conflicts
 from metadata_tools_core import Draft, snapshot, changes
 from artwork_core import inspect_image
+from artwork_report_core import known_hashes, artwork_updates
 from config_core import ConfigError, file_signature, load_config_file
 from identity_core import book_identity, split_book_identity
 from client_metadata_core import (
@@ -1405,6 +1406,7 @@ def add_local_poster(metadata, cover, sort_order):
         return None
     key = poster_key(cover)
     metadata.posters[key] = Proxy.Media(data, sort_order=sort_order)
+    observe_artwork(key, data)
     return key
 
 
@@ -1430,6 +1432,7 @@ def add_remote_poster(metadata, image_urls, sort_order):
                 if not inspect_image(body):
                     raise ValueError('response was not a supported image')
                 metadata.posters[image_url] = Proxy.Media(body, sort_order=sort_order)
+                observe_artwork(image_url, body)
                 return image_url
             except Exception as error:
                 status = status_from_error(error)
@@ -2210,39 +2213,63 @@ def bounded_book_search(function):
     return run
 
 
+def observe_artwork(key, data):
+    candidates = search_runtime.artwork_candidates()
+    if candidates is not None:
+        candidates[to_text(key)] = hashlib.sha256(data).hexdigest()
+
+
 def book_update_overrides(function):
     def run(self, metadata, media, lang, force):
         previous = search_runtime.sidecar()
         previous_preview = search_runtime.preview()
+        previous_candidates = search_runtime.artwork_candidates()
         try:
             previous_locator = search_runtime.CONTEXT.preview_locator
         except AttributeError:
             previous_locator = None
         search_runtime.CONTEXT.preview_locator = None
+        search_runtime.CONTEXT.artwork_candidates = {}
         preview = as_bool(pref('preview_updates', False))
         reporting = preview or as_bool(pref('metadata_reports', False))
         search_runtime.CONTEXT.sidecar = read_book_sidecar(media)
         search_runtime.CONTEXT.preview = preview
         try:
+            selection_scope = selection_key(media, to_text(metadata.id))
+            observation_key = 'artwork-observations-v1:' + selection_scope if selection_scope else ''
+            saved = selection_read(observation_key).get('hashes')
+            before_hashes = known_hashes([to_text(key) for key in metadata.posters], saved)
             before = snapshot(metadata) if reporting else None
+            if reporting:
+                before['artwork_hashes'] = before_hashes
             target = Draft(metadata) if preview else metadata
             result = function(self, target, media, lang, force)
             apply_book_sidecar(target)
+            candidates = search_runtime.artwork_candidates()
+            after_keys = [to_text(key) for key in target.posters]
+            merged = dict(before_hashes)
+            merged.update(candidates)
+            after_hashes = known_hashes(after_keys, merged)
+            if not preview and candidates:
+                selection_write(observation_key, {'hashes': after_hashes})
             if reporting:
                 after = snapshot(target)
+                after['artwork_hashes'] = after_hashes
                 key = selection_key(media, to_text(target.id))
                 entry = selection_read(key)
                 locator = search_runtime.CONTEXT.preview_locator or entry.get('selected')
                 if locator:
                     after['ljudboksarkivet_slug'] = locator
                 report = {'schema_version': 1, 'preview': preview, 'before': before,
-                          'after': after, 'changes': changes(before, after)}
+                          'after': after, 'changes': changes(before, after),
+                          'artwork_updates': artwork_updates(before_hashes, candidates, after_keys)}
                 log('INFO', 'METADATA_REPORT %s', json.dumps(report, ensure_ascii=True, sort_keys=True))
             return result
         finally:
             search_runtime.CONTEXT.sidecar = previous
             search_runtime.CONTEXT.preview = previous_preview
             search_runtime.CONTEXT.preview_locator = previous_locator
+            search_runtime.CONTEXT.artwork_candidates = previous_candidates
     return run
 
 

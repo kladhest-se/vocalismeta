@@ -85,3 +85,10 @@ def preview():
         return CONTEXT.preview
     except AttributeError:
         return False
+
+
+def artwork_candidates():
+    try:
+        return CONTEXT.artwork_candidates
+    except AttributeError:
+        return None

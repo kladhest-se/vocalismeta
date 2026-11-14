@@ -6,7 +6,8 @@
 - Persistent selection of Swedish recordings without changing client identities.
 - Match diagnostics, search budgets, and temporary provider outage backoff.
 - Metadata change previews, local doctor, validated metadata export, and multipart conflict detection.
-- Stronger artwork checks with optional real decoding.
+- Stronger artwork checks with optional real decoding and same-key content previews.
+- Unicode identity compatibility vectors and strict missing-release-config validation.
 - Offline provider fixtures, installer lifecycle/rollback tests, and operator documentation.
 - Integrated source push and verified tagged-release tooling for GitLab/GitHub.
 

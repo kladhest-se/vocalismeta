@@ -511,3 +511,22 @@ These contracts are additive. Existing Audible and LibriVox identifiers do not
 change, and Contracts v2 and v3 do not reinterpret Contract v1 recording keys.
 Future changes should introduce a documented new contract version rather than
 silently changing an existing version.
+
+
+## Unicode fingerprint compatibility
+
+The supplemental [Unicode identity vectors](client-contract/unicode-identity-vectors-v1.json)
+freeze FNV-1a-64 over Unicode scalar values, not UTF-8 bytes or UTF-16 code units.
+A valid surrogate pair represents one scalar value on narrow Python builds.
+ASCII and BMP hashes are unchanged. Older narrow-build name fallbacks containing
+non-BMP characters may be corrected by refresh; do not interpret a name-source
+contributor key as an authoritative person identity. The portable recording-key
+format is unchanged.
+
+Narrator names retain the established whitespace cleanup and Unicode lowercase
+behavior; they do not acquire NFC/NFKC normalization. For example, precomposed and
+decomposed accented narrator names intentionally retain different exact-name
+fallback IDs. Local book evidence uses its existing NFKD/accent-removal pipeline,
+so the equivalent local-book examples group as before. The vectors are executable
+cross-client examples; they do not claim every historical Unicode case table is
+identical. Provider-supplied person identifiers always take precedence.

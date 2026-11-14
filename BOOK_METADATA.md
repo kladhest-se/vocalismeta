@@ -144,7 +144,9 @@ The doctor validates strict configuration/secret-file readability without printi
 secret contents, sidecar schema and artwork paths, multipart tag consistency,
 release destination/reference syntax, and requested image decoding. An unset token
 reference is a warning; remote access and 1Password resolution remain unverified.
-Errors return exit status 1; warnings alone return 0. Book directories are scanned
+Errors return exit status 1; warnings alone return 0. An explicitly supplied
+release settings path must exist and be a regular readable file; a missing file
+is an error, rather than an empty configuration. Book directories are scanned
 for at most 256 audio files; give a single book, not a whole library. A directory
 containing only a sidecar can be validated before its audio is copied in.
 
@@ -158,7 +160,7 @@ are not written to the original metadata, and saved recording selections are not
 changed. Artist updates are outside this album-only preview mode.
 
 A single-line `METADATA_REPORT` JSON record in the agent log contains `before`,
-`after`, and a per-field `changes` map, including artwork key changes. Reports
+`after`, and a per-field `changes` map, including artwork key and observed image-hash changes. Reports
 include titles, descriptions, and identities; keep logs private as appropriate.
 Extract the latest report (optionally filter by metadata identity):
 
@@ -238,3 +240,25 @@ PIL if available. Without a decoder, PNG checks include CRC/decompression/filter
 structure, while JPEG/WebP receive container/dimension checks only. Such a result
 is explicitly marked `decoded: false`; it is not proof of full image decoding.
 `doctor --artwork` requires a decoder and returns an error if unavailable.
+
+
+## Artwork content in previews
+
+Normal album updates retain SHA-256 hashes of the image bytes supplied by the
+agent in local plug-in `Dict` storage. The state is scoped by book/media identity,
+contains no image bytes, and is not exported to the portable sidecar. Previews
+read these observations but never overwrite them.
+
+`before.artwork_hashes` and `after.artwork_hashes` let the report detect different
+bytes at the same local filename or remote URL. `artwork_updates` lists each
+successful retained candidate, its before/after SHA-256, whether the key already
+existed, and `content_change`: `added`, `changed`, `unchanged`, or `unknown`.
+A failed candidate produces no content observation. An unknown/corrupt/missing
+baseline is reported as unknown, not as evidence of a changed stored image.
+
+These hashes describe the agent's last observed input bytes. They are not hashes
+read back from Plex, and cannot prove a locked field was updated or detect an
+external/manual image replacement the agent has not observed. Remote HTTP caching
+still applies. First-time previews for existing libraries will often have unknown
+baselines; normal successful agent artwork writes establish future observations.
+Removing plug-in data loses those baselines without changing book/progress IDs.

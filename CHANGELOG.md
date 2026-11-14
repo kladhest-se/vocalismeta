@@ -4,6 +4,13 @@
 
 ### Fixed
 
+- Return a doctor error for explicitly missing/non-file release settings paths.
+- Hash Unicode scalar values consistently across narrow/wide string storage;
+  add accent/combining-mark/emoji identity vectors without changing BMP IDs.
+- Include observed artwork SHA-256 comparisons in previews, including same-key
+  replacements and explicit unknown baselines, without persisting preview writes.
+- Reconcile documentation and date historical validation checkpoints.
+
 - Decode numeric HTML entities with Unicode characters on Python 2.7, including
   narrow builds; replace invalid scalar values without aborting provider parsing.
 - Add a standalone Python 2.7/3 Unicode regression suite and a checklist for

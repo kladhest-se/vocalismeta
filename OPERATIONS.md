@@ -20,7 +20,7 @@ not the server installer.
 | --- | --- |
 | Python 3 offline helpers | Standard-library regression suite and all published contract vectors |
 | Legacy Plex AgentKit | Installer-owned source compatibility checks; tests use lightweight Plex stubs |
-| Linux/systemd installer | Bash syntax check; live restart and rollback require deployment testing |
+| Linux/systemd installer | Offline lifecycle/rollback simulations and Bash syntax checks; real systemd restart/rollback remain unverified |
 | PHP website | PHP syntax check; site requires PHP 7.4+ |
 | Specific Plex Media Server release | No end-to-end tested version is claimed by this archive |
 

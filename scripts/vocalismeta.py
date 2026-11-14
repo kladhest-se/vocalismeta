@@ -100,6 +100,8 @@ def doctor(args):
             add('error', 'configuration', str(error))
     if args.release_config:
         try:
+            if not args.release_config.is_file():
+                raise ValueError('Explicit release settings file does not exist or is not a regular file')
             import release
             settings = release.configuration(args.release_config)
             for service in release.SERVICES:
