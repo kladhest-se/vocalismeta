@@ -89,3 +89,17 @@ Artwork report tests cover identical/changed bytes under the same poster key,
 unknown baselines, failed candidates, remote URLs, preview isolation, and tracking
 context cleanup. Stored hashes describe bytes last supplied by the agent, not a
 read-back of the Plex database or proof that the server accepted a locked field.
+
+
+## Optional Client Contract v4
+
+`tests/test_contract_v4.py` runs all published v4 vectors/negative mutations and
+synthetic client-facing Plex JSON/XML fixtures. It covers canonical Unicode and
+Mood order, independent revisions, same-key accepted artwork, failed/partial
+refresh preservation, primary/exact provider series, provenance/manual overrides,
+explicit clears, accepted/rejected identity upgrades, later conflicts, preview
+isolation, malformed packet/size rejection, and default-disabled legacy behavior.
+No real service, repository push, app database, or VocalisBook checkout is used.
+The dependency-free v4 parser also runs under the bundle's Python 2.7 syntax and
+installer compatibility checks; actual interpreter/AgentKit execution remains
+unverified. See docs/CLIENT_CONTRACT_V4.md and docs/VOCALISBOOK_V4_HANDOFF.md.

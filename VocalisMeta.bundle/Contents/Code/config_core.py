@@ -280,11 +280,12 @@ def load_config_file(path):
             'include_subtitle', 'simplify_title', 'keep_existing_genres',
             'authors_as_moods', 'series_as_moods', 'embedded_series_fallback',
             'embedded_contributor_fallback', 'author_genres',
-            'work_identity_as_mood', 'extended_player_metadata', 'preview_updates', 'reports',
+            'work_identity_as_mood', 'extended_player_metadata', 'preview_updates', 'reports', 'client_contract_v4',
         ))
         copy_boolean_values(metadata, values, (
             ('preview_updates', 'preview_updates'),
             ('reports', 'metadata_reports'),
+            ('client_contract_v4', 'store_client_contract_v4'),
             ('include_subtitle', 'include_subtitle'),
             ('simplify_title', 'simplify_title'),
             ('keep_existing_genres', 'keep_existing_genres'),

@@ -31,6 +31,13 @@
 
 ### Added
 
+- Optional, default-disabled Client Contract v4 through normal Plex Mood tags:
+  independent deterministic metadata/artwork revisions, explicit primary/exact
+  series relationships and supplied provider IDs, field provenance/availability,
+  deliberate clears, and guarded recording-upgrade review declarations.
+- Canonical bounded v4 transport/parser, published vectors, Plex response fixtures,
+  offline regression tests, and client-first VocalisBook handoff documentation.
+
 - Synthetic provider response fixtures for normal, partial, and malformed payloads.
 - Offline installer lifecycle tests and rollback on catchable interruption, with
   explicit reporting if the restored service cannot restart.
@@ -43,9 +50,6 @@
 - Persistent per-book Swedish provider locators without changing portable IDs.
 - Candidate evidence logs and an offline readable/JSON diagnostic report tool.
 - Per-search HTTP attempt/deadline limits and 60-second provider outage backoff.
-- Adapted ZIFburn/BitSkim release workflow for source uploads, bundle packaging,
-  annotated tags, GitLab/GitHub releases, checksum verification, and resuming uploads.
-  Release configuration remains external; no release was published by integration.
 
 - Ko-fi support links on the public VocalisMeta website and GitHub README.
 - Simplified Catppuccin Mocha-inspired public website with clearer typography,

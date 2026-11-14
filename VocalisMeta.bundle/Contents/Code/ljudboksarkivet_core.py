@@ -5,6 +5,10 @@ from __future__ import unicode_literals
 
 import json
 import re
+try:
+    from urlparse import urlparse
+except ImportError:
+    from urllib.parse import urlparse
 
 
 BASE_URL = 'https://ljudboksarkivet.se'
@@ -195,11 +199,11 @@ def duration_minutes(value):
     return days * 1440 + hours * 60 + minutes + seconds / 60.0
 
 
-def series_entries(html):
+def series_entries(html, exact=False):
     values = []
     seen = set()
-    pattern = r'<a[^>]+href=["\'][^"\']*/bokserie/[^"\']+["\'][^>]*>(.*?)</a>'
-    for raw in re.findall(pattern, to_text(html), re.I | re.S):
+    pattern = r'<a[^>]+href=["\']([^"\']*/bokserie/[^"\']+)["\'][^>]*>(.*?)</a>'
+    for href, raw in re.findall(pattern, to_text(html), re.I | re.S):
         label = clean_text(raw)
         match = re.match(r'^(.*?)\s*(?:[·\-–—]\s*)?del\s+([0-9]+(?:[.,][0-9]+)?)$', label, re.I)
         if match:
@@ -208,10 +212,22 @@ def series_entries(html):
         else:
             title = label
             sequence = ''
-        key = title.lower()
+        item={'title':title,'sequence':sequence}
+        if exact:
+            try:
+                url=urlparse(decode_entities(href))
+                slug=re.match(r'^/bokserie/([a-z0-9]+(?:-[a-z0-9]+)*)/?$',url.path)
+                if (slug and url.scheme in ('','http','https') and
+                    url.hostname in (None,'ljudboksarkivet.se','www.ljudboksarkivet.se') and
+                    not url.query and not url.fragment and url.username is None and
+                    url.password is None and url.port is None):
+                    item['provider_slug']=slug.group(1)
+            except (TypeError,ValueError):
+                pass  # A malformed link must not break legacy metadata parsing.
+        key = (title,item.get('provider_slug'),sequence) if exact else title.lower()
         if title and key not in seen:
             seen.add(key)
-            values.append({'title': title, 'sequence': sequence})
+            values.append(item)
     return values
 
 
@@ -282,6 +298,7 @@ def audiobook_from_html(html, source_url=''):
         'rating_count': rating_count,
         'best_rating': best_rating,
         'series': series_entries(html),
+        '_v4_series_records': series_entries(html, exact=True),
         'url': clean_text(record.get('url')) or source_url,
     }
 

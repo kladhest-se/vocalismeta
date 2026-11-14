@@ -59,3 +59,20 @@ raw Unicode-scalar fingerprints, normalized narrator-name fingerprints, and loca
 book examples. Run `python3 tests/test_unicode_identities.py` (or Python 2.7) from
 the repository root. These vectors supplement the existing v1/v2/v3 contracts;
 they do not change the provider-ID, recording key, or progress-owner formats.
+
+
+## Optional Contract v4 (client-first rollout)
+
+[metadata-contract-v4.json](metadata-contract-v4.json) defines independent content
+revisions, exact/primary series, field provenance/availability, explicit clears,
+and recording-upgrade review declarations. [test-vectors-v4.json](test-vectors-v4.json)
+contains 20 positive cases and 6 invalid transport mutations. [fixtures/v4](fixtures/v4/)
+contains synthetic normal Plex JSON/XML detail responses and a disabled legacy
+response. All cases execute offline. See [the specification](../docs/CLIENT_CONTRACT_V4.md)
+and [VocalisBook handoff](../docs/VOCALISBOOK_V4_HANDOFF.md).
+
+V4 is disabled by default. Every client must reserve `VocalisMeta-v4: ` from author
+parsing before a user enables it. Existing GUIDs, provider IDs, canonical recording
+keys and v1–v3 semantics remain unchanged. There is no app/service/provider access
+requirement. A verified declaration is still a proposal requiring explicit client
+confirmation, never authority to merge listening state automatically.

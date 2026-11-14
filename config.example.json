@@ -40,7 +40,8 @@
     "work_identity_as_mood": true,
     "extended_player_metadata": true,
     "preview_updates": false,
-    "reports": false
+    "reports": false,
+    "client_contract_v4": false
   },
   "artwork": {
     "preference": "local_first",

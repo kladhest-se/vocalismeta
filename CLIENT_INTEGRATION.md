@@ -14,7 +14,8 @@ through the normal authenticated Plex API.
 The base recording contract is **Client Identity Contract v1**. The optional
 literary-work extension is **Work Identity Contract v2**. The bundle's static
 extended relationship and provenance layer is **Extended Player Metadata
-Contract v3**. The current development bundle version is **0.1.1**.
+Contract v3**. Optional **Refresh, Provenance and Migration Contract v4** adds
+explicit refresh/evidence semantics and is disabled by default. The current development bundle version is **0.1.1**.
 
 The normative machine-readable files are:
 
@@ -24,6 +25,8 @@ The normative machine-readable files are:
 - [`client-contract/test-vectors-v2.json`](client-contract/test-vectors-v2.json)
 - [`client-contract/metadata-contract-v3.json`](client-contract/metadata-contract-v3.json)
 - [`client-contract/test-vectors-v3.json`](client-contract/test-vectors-v3.json)
+- [`client-contract/metadata-contract-v4.json`](client-contract/metadata-contract-v4.json)
+- [`client-contract/test-vectors-v4.json`](client-contract/test-vectors-v4.json)
 
 VocalisMeta executes every published vector in its own test suite (run
 `python3 -m unittest discover -s tests -v`; see [DEVELOPMENT.md](DEVELOPMENT.md)). Client
@@ -67,7 +70,8 @@ Use the music hierarchy as follows:
 Do not interpret a raw Mood as an author before checking every reserved prefix:
 `Series: `, `Sequence: `, `Language: `, `Edition: `, `Work-ID: `,
 `Contributor-ID: `, `Work-Published: `, `Production: `, `Rating-Source: `, and
-`Rating-Count: `. Contract v2 and v3 prefixes appear only when their configurable
+`Rating-Count: `, and optional `VocalisMeta-v4: `. Contract v4 requires a
+client-first rollout; reserve its prefix before enabling it. Contract v2 and v3 prefixes appear only when their configurable
 preferences are enabled.
 
 ## Durable identity
@@ -530,3 +534,20 @@ fallback IDs. Local book evidence uses its existing NFKD/accent-removal pipeline
 so the equivalent local-book examples group as before. The vectors are executable
 cross-client examples; they do not claim every historical Unicode case table is
 identical. Provider-supplied person identifiers always take precedence.
+
+
+## Optional Contract v4
+
+See the [complete v4 specification](docs/CLIENT_CONTRACT_V4.md) and
+[VocalisBook implementation handoff](docs/VOCALISBOOK_V4_HANDOFF.md). V4 publishes
+independent deterministic metadata/artwork revisions, explicit primary/exact
+series relationships, per-field provenance/availability, deliberate tombstones,
+and verified/review recording-upgrade declarations through chunked normal Mood
+tags. Emission is disabled by default (`store_client_contract_v4`, JSON
+`metadata.client_contract_v4`). Deploy prefix reservation to every reader first.
+Field provenance is separate from matching method; health/stale changes do not
+churn semantic revision tokens. Every migration still requires client preview and
+explicit confirmation. No GUID/key format changes or listening-database writes
+are introduced. Test the published v4 vectors and Plex XML/JSON fixtures alongside
+all unchanged v1–v3 vectors. This document's legacy timestamp invalidation advice
+is the fallback; v4-capable clients additionally compare the two revision tokens.

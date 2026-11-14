@@ -25,6 +25,7 @@ Apple TV.
 - Stable audiobook, work, and contributor identities for Plex clients
 - Embedded ASIN, region, ISBN, LibriVox ID, series, and contributor tags
 - Local, embedded, and provider cover artwork with validation and fallback
+- Optional client-first Contract v4 revisions, provenance, primary series, and recording-upgrade evidence (off by default)
 - Offline doctor, metadata change previews, and portable metadata export
 - Multipart conflict detection and stronger artwork validation
 - Per-book JSON overrides for identity, metadata, and local artwork
@@ -95,3 +96,4 @@ required.
 - [Requirements, troubleshooting, backup restore, and uninstall](OPERATIONS.md)
 - [Development checks and testing limits](DEVELOPMENT.md)
 - [Audiobook-player integration](CLIENT_INTEGRATION.md)
+- [Optional Client Contract v4](docs/CLIENT_CONTRACT_V4.md) and [VocalisBook handoff](docs/VOCALISBOOK_V4_HANDOFF.md)

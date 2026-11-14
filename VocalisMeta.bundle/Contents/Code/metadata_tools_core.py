@@ -5,7 +5,7 @@ from audible_core import to_text
 from identity_core import client_identity
 from config_core import TEXT_TYPES
 
-PREFIXES = ('Series: ', 'Sequence: ', 'Language: ', 'Edition: ', 'Work-ID: ',
+PREFIXES = ('VocalisMeta-v4: ', 'Series: ', 'Sequence: ', 'Language: ', 'Edition: ', 'Work-ID: ',
             'Contributor-ID: ', 'Work-Published: ', 'Rating-Source: ', 'Rating-Count: ', 'Production: ')
 
 

@@ -123,6 +123,9 @@ from multipart_core import conflicts as multipart_conflicts
 from metadata_tools_core import Draft, snapshot, changes
 from artwork_core import inspect_image
 from artwork_report_core import known_hashes, artwork_updates
+import contract_v4_core as v4
+import contract_v4_runtime as v4_runtime
+from identity_core import canonical_client_key
 from config_core import ConfigError, file_signature, load_config_file
 from identity_core import book_identity, split_book_identity
 from client_metadata_core import (
@@ -339,6 +342,7 @@ def log_album_search_summary(
         'manual=' + diagnostic_value('true' if manual else 'false'),
         'reason=' + diagnostic_value(reason),
     ]
+    remember_v4_match(provider, identity, reason)
     log('INFO', 'SEARCH_SUMMARY ' + ' '.join(fields))
 
 
@@ -437,6 +441,7 @@ def request_json(url, cache_time=CACHE_1DAY, request_status=None, headers=None):
     for attempt in range(1, attempts + 1):
         allowed_timeout, blocked = search_runtime.allowance(url, timeout)
         if blocked:
+            v4_runtime.fail()
             set_request_status(request_status, False, blocked, blocked, attempt - 1)
             log('WARN', 'Provider request skipped: %s (%s)', redact_url(url), blocked)
             return {}
@@ -510,6 +515,7 @@ def request_json(url, cache_time=CACHE_1DAY, request_status=None, headers=None):
         ),
         last_attempt
     )
+    v4_runtime.fail()
     search_runtime.response(url, False, should_retry(last_status))
     return {}
 
@@ -529,6 +535,7 @@ def request_text(url, cache_time=CACHE_1DAY, request_status=None, headers=None):
     for attempt in range(1, attempts + 1):
         allowed_timeout, blocked = search_runtime.allowance(url, timeout)
         if blocked:
+            v4_runtime.fail()
             set_request_status(request_status, False, blocked, blocked, attempt - 1)
             log('WARN', 'Provider request skipped: %s (%s)', redact_url(url), blocked)
             return ''
@@ -571,6 +578,7 @@ def request_text(url, cache_time=CACHE_1DAY, request_status=None, headers=None):
         request_status, False, 'provider_unavailable',
         last_status if last_status is not None else 'network', last_attempt
     )
+    v4_runtime.fail()
     search_runtime.response(url, False, should_retry(last_status))
     return ''
 
@@ -586,6 +594,7 @@ def record_provider_response(provider_status, request_status, schema_valid):
     if request_ok and schema_valid:
         provider_status['successes'] = provider_status.get('successes', 0) + 1
         return
+    v4_runtime.fail()
     provider_status['failures'] = provider_status.get('failures', 0) + 1
     reason = 'invalid_response'
     if request_status and not request_ok:
@@ -767,6 +776,7 @@ def embedded_identity_from_paths(paths):
         log('WARN', 'MULTIPART_CONFLICT field=%s evidence=%s', field,
             json.dumps(conflict['evidence'], ensure_ascii=True, sort_keys=True))
     combined['conflicts'] = unresolved
+    v4_runtime.embedded(combined)
     for key in ('authors', 'narrators', 'language', 'abridged'):
         if key in overrides:
             combined[key] = overrides[key]
@@ -885,7 +895,7 @@ def reserved_mood(value):
     prefixes = (
         SERIES_MOOD_PREFIX, SEQUENCE_MOOD_PREFIX, LANGUAGE_MOOD_PREFIX,
         EDITION_MOOD_PREFIX, WORK_ID_MOOD_PREFIX,
-    ) + V3_MOOD_PREFIXES
+    ) + V3_MOOD_PREFIXES + (v4.PREFIX,)
     for prefix in prefixes:
         if value.startswith(prefix):
             return True
@@ -1002,6 +1012,11 @@ def extended_player_metadata_enabled():
 def prune_disabled_contract_moods(container):
     """Remove only disabled optional-contract values from Plex Moods."""
     prefixes = []
+    if not as_bool(pref('store_client_contract_v4', False)):
+        for item in container:
+            if to_text(item).startswith(v4.PREFIX):
+                prefixes.append(v4.PREFIX)
+                break
     if not work_identity_enabled():
         prefixes.append(WORK_ID_MOOD_PREFIX)
     if not extended_player_metadata_enabled():
@@ -1273,9 +1288,13 @@ def append_search_result(results, identifier, name, lang, score, year=None):
     if year:
         options['year'] = year
     results.Append(MetadataSearchResult(**options))
+    parsed = v4.client_identity(identifier) or {}
+    remember_v4_match(parsed.get('provider','unknown'),identifier,'candidate')
 
 
 def set_value(metadata, field, value, force, authoritative=False):
+    if value is not None and value != '':
+        v4_runtime.scalar(field, value)
     if value is None or value == '':
         return
     if field == 'summary':
@@ -1394,6 +1413,7 @@ def enrichment_request_limit():
 def use_enrichment_request(budget, provider):
     if budget is None or budget.take(provider):
         return True
+    v4_runtime.fail()
     log(
         'WARN', 'Enrichment request budget exhausted before %s request', provider
     )
@@ -1407,6 +1427,9 @@ def add_local_poster(metadata, cover, sort_order):
     key = poster_key(cover)
     metadata.posters[key] = Proxy.Media(data, sort_order=sort_order)
     observe_artwork(key, data)
+    v4_runtime.image(key, hashlib.sha256(data).hexdigest(), sort_order,
+        'manual' if (v4_runtime.current() or {}).get('manual_phase') else ('embedded_artwork' if cover.get('source') else 'local_artwork'),
+        'manual_override' if (v4_runtime.current() or {}).get('manual_phase') else ('embedded_tags' if cover.get('source') else 'local_file'))
     return key
 
 
@@ -1433,11 +1456,13 @@ def add_remote_poster(metadata, image_urls, sort_order):
                     raise ValueError('response was not a supported image')
                 metadata.posters[image_url] = Proxy.Media(body, sort_order=sort_order)
                 observe_artwork(image_url, body)
+                v4_runtime.image(image_url, hashlib.sha256(body).hexdigest(), sort_order, 'remote_provider', 'provider_match')
                 return image_url
             except Exception as error:
                 status = status_from_error(error)
                 retryable = status is None or should_retry(status)
                 if attempt >= attempts or not retryable:
+                    v4_runtime.fail(artwork=True)
                     log('WARN', 'Remote artwork candidate failed: %s (%s)', image_url, error)
                     break
                 delay = backoff_seconds(attempt, error, maximum=30)
@@ -1595,7 +1620,10 @@ def fetch_openlibrary_documents(title, author='', language='', limit=10, budget=
         return []
     url = openlibrary_search_url(title, author, language, limit)
     log('DEBUG', 'Open Library request: %s', url)
-    return openlibrary_documents(request_json(url, BOOK_SEARCH_CACHE_SECONDS))
+    response=request_json(url, BOOK_SEARCH_CACHE_SECONDS)
+    if not isinstance(response,dict) or not isinstance(response.get('docs'),list):
+        v4_runtime.fail()
+    return openlibrary_documents(response)
 
 
 def fetch_openlibrary_isbn(isbn, budget=None):
@@ -1605,7 +1633,10 @@ def fetch_openlibrary_isbn(isbn, budget=None):
     if not use_enrichment_request(budget, 'Open Library'):
         return []
     log('DEBUG', 'Open Library ISBN enrichment request: %s', isbn)
-    return openlibrary_documents(request_json(url, BOOK_SEARCH_CACHE_SECONDS))
+    response=request_json(url, BOOK_SEARCH_CACHE_SECONDS)
+    if not isinstance(response,dict) or not isinstance(response.get('docs'),list):
+        v4_runtime.fail()
+    return openlibrary_documents(response)
 
 
 def fetch_openlibrary_work(document, budget=None):
@@ -1633,6 +1664,8 @@ def best_openlibrary_document(
         for document in fetch_openlibrary_isbn(isbn, budget):
             if isbn in openlibrary_isbns(document):
                 log('DEBUG', 'Open Library enrichment matched edition ISBN %s', isbn)
+                if v4_runtime.current() is not None:
+                    v4_runtime.current()['work_method'] = 'isbn_match'
                 return document
     if budget is not None and budget.remaining <= 0:
         return None
@@ -1654,10 +1687,11 @@ def fetch_googlebooks_isbn(isbn, budget=None):
     if not use_enrichment_request(budget, 'Google Books'):
         return []
     log('DEBUG', 'Google Books ISBN enrichment request: %s', isbn)
-    return googlebooks_volumes(request_json(
-        url, BOOK_SEARCH_CACHE_SECONDS,
-        headers=googlebooks_request_headers()
-    ))
+    response=request_json(url, BOOK_SEARCH_CACHE_SECONDS,headers=googlebooks_request_headers())
+    if (not isinstance(response,dict) or ('items' in response and not isinstance(response['items'],list))
+        or ('items' not in response and response.get('totalItems')!=0)):
+        v4_runtime.fail()
+    return googlebooks_volumes(response)
 
 
 def fetch_googlebooks_volumes(
@@ -1673,10 +1707,11 @@ def fetch_googlebooks_volumes(
     if not use_enrichment_request(budget, 'Google Books'):
         return []
     log('DEBUG', 'Google Books title enrichment request: %s', title)
-    return googlebooks_volumes(request_json(
-        url, BOOK_SEARCH_CACHE_SECONDS,
-        headers=googlebooks_request_headers()
-    ))
+    response=request_json(url, BOOK_SEARCH_CACHE_SECONDS,headers=googlebooks_request_headers())
+    if (not isinstance(response,dict) or ('items' in response and not isinstance(response['items'],list))
+        or ('items' not in response and response.get('totalItems')!=0)):
+        v4_runtime.fail()
+    return googlebooks_volumes(response)
 
 
 def fetch_librivox_book(book_id, provider_status=None):
@@ -1979,6 +2014,8 @@ def best_googlebooks_volume(
         for volume in fetch_googlebooks_isbn(isbn, budget):
             if isbn in googlebooks_isbns(volume):
                 log('DEBUG', 'Google Books enrichment matched edition ISBN %s', isbn)
+                if v4_runtime.current() is not None:
+                    v4_runtime.current()['google_method']='isbn_match'
                 return volume
     if budget is not None and budget.remaining <= 0:
         return None
@@ -2054,6 +2091,10 @@ def apply_openlibrary_enrichment(
         metadata, document
     )
     if not work_relationship_valid:
+        v4_runtime.clear('work','rejected_work_relationship')
+        v4_runtime.clear('work_publication','rejected_work_relationship')
+        if v4_runtime.current() is not None:
+            v4_runtime.current()['cleared_namespaces'] = ['work_identity','work_publication','openlibrary_author_ids']
         if work_identity_enabled():
             replace_work_identity(metadata.moods, '')
         replace_openlibrary_v3_metadata(metadata.moods, {})
@@ -2061,6 +2102,11 @@ def apply_openlibrary_enrichment(
         identity = openlibrary_work_identity(document)
         replace_work_identity(metadata.moods, identity)
     if work_relationship_valid:
+        method = (v4_runtime.current() or {}).get('work_method','provider_match')
+        if openlibrary_work_identity(document):
+            v4_runtime.observe('work', openlibrary_work_identity(document), 'openlibrary', method)
+        if openlibrary_year(document):
+            v4_runtime.observe('work_publication', to_text(openlibrary_year(document)), 'openlibrary', method)
         replace_openlibrary_v3_metadata(metadata.moods, document)
     if not metadata.summary:
         work = fetch_openlibrary_work(document, budget)
@@ -2075,6 +2121,8 @@ def apply_openlibrary_enrichment(
                 metadata.originally_available_at = Datetime.ParseDate(
                     '%04d-01-01' % year
                 ).date()
+                v4_runtime.recording_date(metadata.originally_available_at.isoformat(), 'openlibrary',
+                    (v4_runtime.current() or {}).get('work_method','provider_match'), 'work_year_fallback')
             except Exception as error:
                 log('WARN', 'Could not parse Open Library year %s: %s', year, error)
     if not keep_existing_genres and not metadata.genres:
@@ -2104,6 +2152,8 @@ def apply_googlebooks_enrichment(
                 metadata.originally_available_at = Datetime.ParseDate(
                     date_value
                 ).date()
+                v4_runtime.recording_date(metadata.originally_available_at.isoformat(), 'googlebooks',
+                    (v4_runtime.current() or {}).get('google_method','provider_match'), 'book_edition_date_fallback')
             except Exception as error:
                 log(
                     'WARN', 'Could not parse Google Books date %s: %s',
@@ -2196,6 +2246,8 @@ def read_book_sidecar(media):
 def bounded_book_search(function):
     def run(self, results, media, lang, manual):
         previous = (search_runtime.window(), search_runtime.sidecar())
+        previous_media = v4_search_media()
+        search_runtime.CONTEXT.v4_search_media = media
         try:
             requests = max(1, min(48, int(pref('search_request_budget', 24))))
             seconds = max(1, min(180, int(pref('search_timeout', 90))))
@@ -2210,7 +2262,109 @@ def bounded_book_search(function):
             log('INFO', 'SEARCH_BUDGET used=%d limit=%d exhausted=%s',
                 active.used, active.limit, active.exhausted)
             search_runtime.CONTEXT.window, search_runtime.CONTEXT.sidecar = previous
+            search_runtime.CONTEXT.v4_search_media = previous_media
     return run
+
+
+def v4_search_media():
+    try:
+        return search_runtime.CONTEXT.v4_search_media
+    except AttributeError:
+        return None
+
+
+def v4_state_key(media):
+    scope = media_value_id(media) or media_file_path(media)
+    return 'client-contract-v4:' + hashlib.sha256(scope.encode('utf-8')).hexdigest() if scope else ''
+
+
+def remember_v4_match(provider, identifier, reason, media=None):
+    if not as_bool(pref('store_client_contract_v4', False)) or not identifier:
+        return
+    media = media if media is not None else v4_search_media()
+    key = v4_state_key(media)
+    if not key:
+        return
+    canonical_key = canonical_client_key(identifier)
+    if not canonical_key:
+        return
+    source = 'embedded_tags' if provider=='isbn' else provider if provider in v4.SOURCES else 'unknown'
+    evidence = ('explicit_identifier' if reason in ('exact_asin','exact_librivox_id')
+                else 'manual_override' if reason=='sidecar' else 'embedded_tags' if provider=='isbn'
+                else 'provider_match' if provider in ('audible','librivox','ljudboksarkivet') else 'unknown')
+    method = ('manual_override' if reason=='sidecar' else 'explicit_identifier' if evidence=='explicit_identifier'
+              else 'provider_match' if evidence=='provider_match' else 'local_fallback')
+    record = selection_read(key)
+    receipts = dict(record.get('matches') or {})
+    if len(receipts)>=32:
+        receipts = {}
+    receipts[canonical_key] = {'source':source,'evidence':evidence,'method':method}
+    record['matches'] = receipts
+    selection_write(key,record)
+
+
+def prepare_v4_context(media, metadata, previous_state):
+    context = v4_runtime.current()
+    context['previous_profile'] = previous_state.get('profile') or {}
+    receipts = previous_state.get('matches') or {}
+    canonical_key=canonical_client_key(metadata.id)
+    old_payload=previous_state.get('payload') or {}
+    context['match'] = receipts.get(canonical_key) or (old_payload.get('match') if old_payload.get('recording_key')==canonical_key else None) or {'source':'unknown','evidence':'unknown','method':'unknown'}
+    paths = media_file_paths(media)
+    embedded = embedded_identity_from_paths(paths)
+    profile = context.setdefault('profile',{})
+    hints = [media_filename(media),media_value(media,'album')] + paths
+    explicit_asin = find_asin(*hints)
+    explicit_librivox = find_librivox_id(*hints)
+    if explicit_asin:
+        if profile.get('asin') and profile['asin']!=explicit_asin:
+            profile['conflicting_tags']=True
+        profile['asin']=explicit_asin
+    if explicit_librivox:
+        if profile.get('librivox_id') and profile['librivox_id']!=explicit_librivox:
+            profile['conflicting_tags']=True
+        profile['librivox_id']=explicit_librivox
+    if profile.get('asin'):
+        profile['region'] = profile.get('region') or find_region_override(*hints) or to_text(pref('region','us'))
+    duration = media_duration_minutes(media)
+    if duration and duration>0:
+        try:
+            profile['duration_ms'] = int(round(duration*60000))
+        except (TypeError,ValueError,OverflowError):
+            pass
+    # These are the only profile values persisted; paths and tag diagnostics stay out.
+
+
+def publish_v4(metadata, media, previous_state, state_key):
+    context=v4_runtime.current()
+    if not work_identity_enabled():
+        v4_runtime.clear('work','namespace_disabled')
+        context.setdefault('cleared_namespaces',[]).append('work_identity')
+    if not extended_player_metadata_enabled():
+        for field in ('contributors','work_publication'):
+            v4_runtime.clear(field,'namespace_disabled')
+        context.setdefault('cleared_namespaces',[]).append('extended_metadata')
+    if not as_bool(pref('store_authors_as_moods',True),True):
+        v4_runtime.clear('authors','namespace_disabled')
+    if not as_bool(pref('series_as_moods',True),True):
+        v4_runtime.clear('series','namespace_disabled')
+    context['cleared_namespaces']=sorted(set(context.get('cleared_namespaces') or []))
+    v4_runtime.accepted_image([to_text(key) for key in metadata.posters])
+    previous=previous_state.get('payload') or {}
+    try:
+        payload=v4.build(snapshot(metadata),context,previous,context.get('profile') or {})
+        tags=v4.encode(payload)
+    except (ValueError,TypeError,OverflowError) as error:
+        log('WARN','Contract v4 unavailable; retaining previous private state: %s',error)
+        tags=[]
+        values=[to_text(item) for item in metadata.moods if not to_text(item).startswith(v4.PREFIX)]
+        replace_container(metadata.moods,values+tags)
+        return
+    values=[to_text(item) for item in metadata.moods if not to_text(item).startswith(v4.PREFIX)]
+    replace_container(metadata.moods,values+tags)
+    record=dict(previous_state)
+    record.update(payload=payload,profile=context.get('profile') or {})
+    selection_write(state_key,record)
 
 
 def observe_artwork(key, data):
@@ -2224,6 +2378,9 @@ def book_update_overrides(function):
         previous = search_runtime.sidecar()
         previous_preview = search_runtime.preview()
         previous_candidates = search_runtime.artwork_candidates()
+        previous_v4 = v4_runtime.current()
+        enabled_v4 = as_bool(pref('store_client_contract_v4', False))
+        search_runtime.CONTEXT.contract_v4 = {} if enabled_v4 else None
         try:
             previous_locator = search_runtime.CONTEXT.preview_locator
         except AttributeError:
@@ -2238,13 +2395,21 @@ def book_update_overrides(function):
             selection_scope = selection_key(media, to_text(metadata.id))
             observation_key = 'artwork-observations-v1:' + selection_scope if selection_scope else ''
             saved = selection_read(observation_key).get('hashes')
+            state_key = v4_state_key(media)
+            previous_state = selection_read(state_key) if enabled_v4 else {}
+            if enabled_v4:
+                prepare_v4_context(media, metadata, previous_state)
             before_hashes = known_hashes([to_text(key) for key in metadata.posters], saved)
             before = snapshot(metadata) if reporting else None
             if reporting:
                 before['artwork_hashes'] = before_hashes
             target = Draft(metadata) if preview else metadata
             result = function(self, target, media, lang, force)
+            if enabled_v4:
+                v4_runtime.current()['manual_phase'] = True
             apply_book_sidecar(target)
+            if enabled_v4:
+                v4_runtime.manual(search_runtime.sidecar())
             candidates = search_runtime.artwork_candidates()
             after_keys = [to_text(key) for key in target.posters]
             merged = dict(before_hashes)
@@ -2252,6 +2417,8 @@ def book_update_overrides(function):
             after_hashes = known_hashes(after_keys, merged)
             if not preview and candidates:
                 selection_write(observation_key, {'hashes': after_hashes})
+            if enabled_v4:
+                publish_v4(target, media, previous_state, state_key)
             if reporting:
                 after = snapshot(target)
                 after['artwork_hashes'] = after_hashes
@@ -2270,6 +2437,7 @@ def book_update_overrides(function):
             search_runtime.CONTEXT.preview = previous_preview
             search_runtime.CONTEXT.preview_locator = previous_locator
             search_runtime.CONTEXT.artwork_candidates = previous_candidates
+            search_runtime.CONTEXT.contract_v4 = previous_v4
     return run
 
 
@@ -2426,6 +2594,7 @@ def sidecar_search_result(results, media, title, author, lang):
         if not book:
             return True
         append_ljudboksarkivet_results(results, [(100, book)], lang, False, media)
+        remember_v4_match('ljudboksarkivet',ljudboksarkivet_identity(book),'sidecar',media)
         return True
     else:
         if not title or title in UNKNOWN_VALUES:
@@ -2439,6 +2608,7 @@ def sidecar_search_result(results, media, title, author, lang):
                 search_runtime.sidecar().get('metadata', {}).get('language'))
         name = '"%s" — Local metadata' % title
     append_search_result(results, identifier, name, lang, 100, year)
+    remember_v4_match(provider,identifier,'sidecar',media)
     log('INFO', 'Match selected from vocalismeta.json: %s', identifier)
     return True
 
@@ -3128,6 +3298,7 @@ class VocalisMetaAlbum(Agent.Album):
             return
         product = fetch_product(asin, region)
         if not product:
+            v4_runtime.fail()
             log(
                 'ERROR',
                 'No exact Audible product found for ASIN %s in region %s; existing metadata was preserved',
@@ -3145,6 +3316,9 @@ class VocalisMetaAlbum(Agent.Album):
         if as_bool(pref('simplify_title', False)):
             title = primary_title(product.get('title'))
         embedded = embedded_identity_from_paths(media_file_paths(media))
+        v4_runtime.provider('audible', title, people(product, 'authors'), people(product, 'narrators'),
+            product.get('series') or [], text_field(product.get('language')), product_abridged(product),
+            release_date(product), region, product_runtime_minutes(product))
         remote_series = series_entries(product)
         local_series = (
             embedded_series_entries(embedded)
@@ -3233,6 +3407,7 @@ class VocalisMetaAlbum(Agent.Album):
     def update_librivox(self, metadata, media, lang, force, book_id):
         book = fetch_librivox_book(book_id)
         if not book:
+            v4_runtime.fail()
             log(
                 'ERROR',
                 'No exact LibriVox project found for ID %s; existing metadata was preserved',
@@ -3257,6 +3432,8 @@ class VocalisMetaAlbum(Agent.Album):
             book_readers = book_readers or embedded.get('narrators') or []
         active_language = librivox_language(book) or embedded.get('language')
         active_abridged = embedded.get('abridged')
+        v4_runtime.provider('librivox', title, librivox_authors(book), librivox_readers(book), [],
+            librivox_language(book), None, '%04d-01-01' % librivox_year(book) if librivox_year(book) else None)
         book_authors, local_series, active_language, active_abridged = (
             preserve_relationship_fallbacks(
                 metadata, book_authors, local_series, active_language,
@@ -3319,6 +3496,8 @@ class VocalisMetaAlbum(Agent.Album):
     ):
         previous_title = to_text(metadata.title).strip()
         title = text_field(book.get('title'))
+        v4_runtime.provider('ljudboksarkivet', title, book.get('authors') or [], book.get('narrators') or [],
+            book.get('_v4_series_records',book.get('series')) or [], book.get('language'), None, book.get('release_date'), runtime=book.get('duration_minutes'))
         authors = list(book.get('authors') or [])
         narrators = list(book.get('narrators') or [])
         active_series = list(book.get('series') or [])

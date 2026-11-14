@@ -34,3 +34,17 @@ is tested; it must not be confused with real service rollback verification.
 
 See [DEVELOPMENT.md](DEVELOPMENT.md), [OPERATIONS.md](OPERATIONS.md),
 [BOOK_METADATA.md](BOOK_METADATA.md), and [release instructions](docs/RELEASING.md).
+
+
+## Optional Client Contract v4 — 14 November 2026
+
+Added default-disabled v4 publication, canonical bounded transport/reference parser,
+independent content revisions, explicit series references/supplied provider IDs,
+field provenance and availability/tombstones, and guarded recording upgrade
+review declarations. The specification and VocalisBook handoff are under docs/.
+20 positive vectors, 6 negative transport mutations, and synthetic Plex JSON/XML
+fixtures supplement the unchanged legacy contracts. The full offline suite passes
+196 test methods in a Pillow-enabled environment. Bash/PHP syntax and the
+installer-owned source checks pass. Actual Plex/Python 2/provider validation is
+still unverified; no releases, pushes, app database changes, or VocalisBook edits
+were performed for this task. Existing local changelog edits were preserved.

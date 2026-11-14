@@ -290,5 +290,11 @@
     "label": "Record album metadata snapshots for offline export (agent log)",
     "type": "bool",
     "default": "false"
+  },
+  {
+    "id": "store_client_contract_v4",
+    "label": "Emit optional Client Contract v4 (enable only after all clients support v4)",
+    "type": "bool",
+    "default": "false"
   }
 ]

@@ -5,6 +5,7 @@
 - Optional per-book identity, metadata, and artwork overrides.
 - Persistent selection of Swedish recordings without changing client identities.
 - Match diagnostics, search budgets, and temporary provider outage backoff.
+- Optional Client Contract v4 (disabled by default): content revisions, field evidence, explicit series and recording-upgrade safeguards.
 - Metadata change previews, local doctor, validated metadata export, and multipart conflict detection.
 - Stronger artwork checks with optional real decoding and same-key content previews.
 - Unicode identity compatibility vectors and strict missing-release-config validation.
